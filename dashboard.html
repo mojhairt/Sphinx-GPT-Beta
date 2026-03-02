@@ -17,9 +17,9 @@
 
     <link rel="stylesheet" href="style.css">
     <style>
-        body {
+        body.dashboard-page {
             /* Reset body background for dashboard since it's an interior page */
-            background: #F4F5F7;
+            background: #F4F5F7 !important;
         }
 
         .dashboard-layout {
@@ -291,7 +291,7 @@
     </style>
 </head>
 
-<body>
+<body class="dashboard-page">
     <header class="header">
         <div class="logo-container" onclick="window.location.href='index.html'">
             <img src="logo.png" alt="Sphinx-GPT Logo" class="logo-icon">
