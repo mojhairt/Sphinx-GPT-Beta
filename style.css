@@ -28,7 +28,7 @@ body {
     /* Deeper, more sophisticated overlay */
     background:
         linear-gradient(135deg, rgba(224, 112, 46, 0.92) 0%, rgba(193, 86, 28, 0.85) 100%),
-        url('bg.jpg') center/cover no-repeat fixed;
+        url('/bg.jpg') center/cover no-repeat fixed;
 }
 
 /* Header */
