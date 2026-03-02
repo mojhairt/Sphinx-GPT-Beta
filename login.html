@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log In | Sphinx-GPT BETA</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            /* Reset body strictly for the split layout */
+            margin: 0;
+            padding: 0;
+            background-color: var(--text-white);
+            display: block;
+            min-height: 100vh;
+        }
+
+        /* Ensure mobile menu btn is hidden on these split layout pages as they don't have the main header */
+        .mobile-menu-btn {
+            display: none !important;
+        }
+
+        .auth-layout {
+            display: flex;
+            min-height: 100vh;
+            width: 100%;
+        }
+
+        /* Left Side: Branding / Visuals */
+        .auth-visual {
+            flex: 1;
+            background: linear-gradient(rgba(224, 112, 46, 0.85), rgba(224, 112, 46, 0.95)), url('bg.jpg') center/cover no-repeat;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            color: var(--text-white);
+            text-align: center;
+        }
+
+        .auth-visual h1 {
+            font-family: 'Etna Sans Serif', Impact, sans-serif;
+            font-size: 54px;
+            letter-spacing: 4px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .auth-visual p {
+            font-size: 18px;
+            max-width: 400px;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+
+        .auth-logo {
+            width: 120px;
+            height: 120px;
+            margin-bottom: 30px;
+            object-fit: contain;
+            filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.2));
+        }
+
+        /* Right Side: Form Area */
+        .auth-form-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--text-white);
+            padding: 40px;
+        }
+
+        .auth-header-links {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 60px;
+        }
+
+        .back-home {
+            color: var(--text-gray);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 15px;
+            transition: color 0.2s ease;
+        }
+
+        .back-home:hover {
+            color: var(--bg-orange);
+        }
+
+        .form-container {
+            max-width: 400px;
+            width: 100%;
+            margin: auto;
+            /* Centers the form vertically and horizontally within its flex parent */
+        }
+
+        .form-title {
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--text-black);
+            margin-bottom: 10px;
+        }
+
+        .form-subtitle {
+            color: var(--text-gray);
+            font-size: 16px;
+            margin-bottom: 40px;
+        }
+
+        .input-group {
+            margin-bottom: 24px;
+            text-align: left;
+        }
+
+        .input-label {
+            display: block;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+
+        .login-input {
+            width: 100%;
+            height: 52px;
+            border-radius: 12px;
+            border: 1.5px solid #E5E7EB;
+            padding: 0 16px;
+            font-size: 15px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: all 0.2s ease;
+            background-color: #F9FAFB;
+        }
+
+        .login-input:focus {
+            border-color: var(--bg-orange);
+            background-color: var(--text-white);
+            box-shadow: 0 0 0 4px rgba(224, 112, 46, 0.1);
+        }
+
+        .forgot-password {
+            display: block;
+            text-align: right;
+            color: var(--bg-orange);
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            margin-top: -10px;
+            margin-bottom: 24px;
+        }
+
+        .login-btn {
+            width: 100%;
+            height: 52px;
+            border-radius: 12px;
+            background-color: var(--text-black);
+            color: var(--text-white);
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .login-btn:hover {
+            background-color: #333;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        .auth-footer {
+            text-align: center;
+            margin-top: 40px;
+            color: var(--text-gray);
+            font-size: 15px;
+        }
+
+        .auth-footer a {
+            color: var(--bg-orange);
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 900px) {
+            .auth-layout {
+                flex-direction: column;
+            }
+
+            .auth-visual {
+                padding: 60px 30px;
+                flex: none;
+            }
+
+            .auth-visual h1 {
+                font-size: 40px;
+            }
+
+            .auth-logo {
+                width: 90px;
+                height: 90px;
+            }
+
+            .form-container {
+                margin: 40px auto;
+            }
+
+            .auth-header-links {
+                justify-content: center;
+                margin-bottom: 30px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="auth-layout">
+        <!-- Left Visual Area -->
+        <div class="auth-visual">
+            <img src="logo.png" alt="Sphinx-GPT" class="auth-logo">
+            <h1>Sphinx-GPT BETA</h1>
+            <p>Your ultimate academic AI assistant. Solve complex math equations naturally and keep all your discoveries
+                organized in one highly intelligent place.</p>
+        </div>
+
+        <!-- Right Form Area -->
+        <div class="auth-form-area">
+            <div class="auth-header-links">
+                <a href="index.html" class="back-home">← Back to Home</a>
+            </div>
+
+            <div class="form-container">
+                <h2 class="form-title">Welcome Back</h2>
+                <p class="form-subtitle">Please enter your details to sign in.</p>
+
+                <form id="login-form">
+                    <div class="input-group">
+                        <label class="input-label">Email Address</label>
+                        <input type="email" id="login-email" class="login-input" placeholder="student@university.edu"
+                            required>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Password</label>
+                        <input type="password" id="login-password" class="login-input" placeholder="••••••••" required>
+                    </div>
+
+                    <a href="#" class="forgot-password">Forgot Password?</a>
+
+                    <button type="submit" class="login-btn">Log In</button>
+                    <p id="login-error" style="color: red; font-size: 13px; margin-top: 10px; display: none;"></p>
+                </form>
+
+                <div class="auth-footer">
+                    Don't have an account? <a href="signup.html">Sign up</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { supabase } from './supabaseClient.js';
+
+        // Check if user is already logged in
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+                window.location.href = 'dashboard.html';
+            }
+        });
+
+        document.getElementById('login-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const errorMsg = document.getElementById('login-error');
+
+            const btn = document.querySelector('.login-btn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Logging In...';
+            btn.disabled = true;
+
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
+
+            btn.textContent = originalText;
+            btn.disabled = false;
+
+            if (error) {
+                errorMsg.textContent = error.message;
+                errorMsg.style.display = "block";
+            } else {
+                // Success: Create session and redirect
+                window.location.href = 'dashboard.html';
+            }
+        });
+    </script>
+</body>
+
+</html>
