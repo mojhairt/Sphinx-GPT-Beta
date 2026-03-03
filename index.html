@@ -208,15 +208,21 @@
             function startChat(initialMessage) {
                 if (!initialMessage.trim()) return;
 
-                // Hide hero, show chat
-                heroSection.style.display = 'none';
-                chatInterface.style.display = 'flex';
+                // Add animation class to hero
+                heroSection.classList.add('animate-out');
 
-                // Add the user's message
-                addMessage(initialMessage, 'user');
+                // Wait for animation to finish before switching displays
+                setTimeout(() => {
+                    heroSection.style.display = 'none';
+                    chatInterface.style.display = 'flex';
+                    chatInput.focus();
 
-                // Simulate AI loading and response
-                simulateAIResponse(initialMessage);
+                    // Add the user's message
+                    addMessage(initialMessage, 'user');
+
+                    // Simulate AI loading and response
+                    simulateAIResponse(initialMessage);
+                }, 400); // 400ms matches the CSS transition duration
             }
 
             // Function to add a message bubble
