@@ -623,7 +623,8 @@ body {
     .hero-title {
         font-size: clamp(40px, 8vw, 80px);
         /* Smaller for mobile */
-        letter-spacing: 6px;
+        letter-spacing: 4px;
+        filter: drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.5)) drop-shadow(0px 0px 15px rgba(224, 112, 46, 0.3));
     }
 
     .pharaonic-line {
@@ -661,67 +662,45 @@ body {
 
 @media (max-width: 480px) {
     .hero-title {
-        font-size: clamp(32px, 10vw, 50px);
-        letter-spacing: 4px;
+        font-size: clamp(32px, 9vw, 50px);
+        letter-spacing: 2px;
     }
 
-    .pharaonic-line .line {
-        display: none;
-        /* Simplify on very small screens */
+    .pharaonic-line {
+        gap: 8px;
     }
 
     .search-container {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        /* mic takes left, actions take right */
-        grid-template-rows: auto auto;
-        /* input on top, buttons below */
-        gap: 10px;
-        padding: 12px 14px;
-        background: rgba(255, 255, 255, 0.95);
-        border-radius: 20px;
-        height: auto;
+        height: 54px;
+        padding: 0 8px;
+        border-radius: 27px;
+    }
+
+    .icon-button {
+        width: 36px;
+        height: 36px;
+    }
+
+    .icon-button .material-symbols-outlined {
+        font-size: 22px;
     }
 
     .search-input {
-        grid-column: 1 / -1;
-        /* span full width */
-        grid-row: 1;
-        width: 100%;
-        text-align: left;
-        padding: 5px 0;
-    }
-
-    .search-container>.mic-btn {
-        grid-column: 1;
-        grid-row: 2;
-        justify-self: start;
-        width: 44px;
-        height: 44px;
-        background-color: #F3F4F6;
-        /* Optional: give it a slight background like in screenshot */
+        font-size: 14px;
+        padding: 0 8px;
     }
 
     .search-actions {
-        grid-column: 2;
-        grid-row: 2;
-        display: flex;
-        justify-content: flex-end;
-        align-items: center;
-        gap: 12px;
-        width: auto;
-    }
-
-    .upload-btn {
-        width: 44px;
-        height: 44px;
+        gap: 4px;
     }
 
     .send-btn {
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
-        padding: 0;
+        width: 36px;
+        height: 36px;
+    }
+
+    .send-icon {
+        font-size: 20px !important;
     }
 }
 
