@@ -380,16 +380,18 @@
         <aside class="sidebar">
             <ul class="sidebar-menu">
                 <li class="sidebar-item">
-                    <a href="#" class="sidebar-link active">
+                    <a href="dashboard.html" class="sidebar-link active">
                         <span class="material-symbols-outlined">grid_view</span>
                         Overview
                     </a>
                 </li>
+                <!-- Chat History Section -->
                 <li class="sidebar-item">
-                    <a href="#" class="sidebar-link">
-                        <span class="material-symbols-outlined">forum</span>
-                        Chat History
-                    </a>
+                    <div class="sidebar-title" style="padding: 15px 36px 5px; margin:0;">Chat History</div>
+                    <ul class="sidebar-menu" id="chat-history-list"
+                        style="max-height: 200px; overflow-y: auto; padding-right: 5px;">
+                        <!-- Chat history items will be injected here -->
+                    </ul>
                 </li>
                 <li class="sidebar-item">
                     <a href="#" class="sidebar-link">
@@ -456,7 +458,7 @@
                             <span class="material-symbols-outlined">task_alt</span>
                         </div>
                     </div>
-                    <div class="stat-value">0</div>
+                    <div class="stat-value" id="problems-solved-stat">0</div>
                 </div>
 
                 <div class="stat-card">
@@ -485,40 +487,8 @@
                     <h2 class="section-title">Recent Activity</h2>
                     <a href="#" class="view-all">View All</a>
                 </div>
-                <ul class="activity-list">
-                    <li class="activity-item">
-                        <div class="activity-icon">
-                            <span class="material-symbols-outlined">functions</span>
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-title">Calculus: Limits and Continuity</div>
-                            <div class="activity-desc">Step-by-step resolution for limit equations.</div>
-                        </div>
-                        <div class="status-badge">Solved</div>
-                        <div class="activity-date">Today, 10:30 AM</div>
-                    </li>
-                    <li class="activity-item">
-                        <div class="activity-icon">
-                            <span class="material-symbols-outlined">calculate</span>
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-title">Linear Algebra: Matrix Multiplication</div>
-                            <div class="activity-desc">Matrix dimension analysis and dot product calculation.</div>
-                        </div>
-                        <div class="status-badge">Solved</div>
-                        <div class="activity-date">Yesterday</div>
-                    </li>
-                    <li class="activity-item">
-                        <div class="activity-icon">
-                            <span class="material-symbols-outlined">data_usage</span>
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-title">Statistics: Standard Deviation</div>
-                            <div class="activity-desc">Variance formulas for dataset population vs sample.</div>
-                        </div>
-                        <div class="status-badge">Solved</div>
-                        <div class="activity-date">Oct 12, 2026</div>
-                    </li>
+                <ul class="activity-list" id="recent-activity-list">
+                    <!-- Activities will be injected here -->
                 </ul>
             </div>
         </main>
@@ -588,9 +558,89 @@
                 window.location.href = 'login.html';
             });
 
+            // Fetch user data from Supabase
+            fetchUserData(session.user.id);
+
         } else {
             // Not logged in? Show modal instead of immediate redirect
             document.getElementById('auth-modal').style.display = 'flex';
+        }
+
+        async function fetchUserData(userId) {
+            try {
+                // Fetch all user messages
+                const { data: messages, error } = await supabase
+                    .from('messages')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .eq('sender', 'user')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                // 1. Update Problems Solved (Count of user messages)
+                const problemsSolvedStat = document.getElementById('problems-solved-stat');
+                if (problemsSolvedStat && messages) {
+                    problemsSolvedStat.textContent = messages.length;
+                }
+
+                // 2. Update Recent Activity & Chat History
+                const recentActivityList = document.getElementById('recent-activity-list');
+                const chatHistoryList = document.getElementById('chat-history-list');
+
+                if (messages && messages.length > 0) {
+                    if (recentActivityList) recentActivityList.innerHTML = '';
+                    if (chatHistoryList) chatHistoryList.innerHTML = '';
+
+                    messages.forEach((msg, index) => {
+                        const dateObj = new Date(msg.created_at);
+                        const dateStr = dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                        const timeStr = dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+
+                        // Add to Recent Activity (limit to top 5)
+                        if (index < 5 && recentActivityList) {
+                            const li = document.createElement('li');
+                            li.className = 'activity-item';
+                            li.innerHTML = `
+                                <div class="activity-icon">
+                                    <span class="material-symbols-outlined">functions</span>
+                                </div>
+                                <div class="activity-content">
+                                    <div class="activity-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;">
+                                        ${msg.content}
+                                    </div>
+                                    <div class="activity-desc">Math Problem</div>
+                                </div>
+                                <div class="status-badge">Solved</div>
+                                <div class="activity-date">${dateStr}, ${timeStr}</div>
+                            `;
+                            recentActivityList.appendChild(li);
+                        }
+
+                        // Add to Chat History sidebar (limit to top 10)
+                        if (index < 10 && chatHistoryList) {
+                            const liHistory = document.createElement('li');
+                            liHistory.className = 'sidebar-item';
+                            liHistory.innerHTML = `
+                                <a href="#" class="sidebar-link" style="padding: 8px 16px; font-size: 13px;">
+                                    <span class="material-symbols-outlined" style="font-size: 16px;">forum</span>
+                                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${msg.content}</span>
+                                </a>
+                            `;
+                            chatHistoryList.appendChild(liHistory);
+                        }
+                    });
+                } else {
+                    if (recentActivityList) {
+                        recentActivityList.innerHTML = '<li class="activity-item"><div class="activity-content"><div class="activity-desc">No recent activity found. Start a chat!</div></div></li>';
+                    }
+                    if (chatHistoryList) {
+                        chatHistoryList.innerHTML = '<li class="sidebar-item"><span style="padding: 12px 16px; font-size: 13px; color: var(--text-gray); display: block;">No chats yet</span></li>';
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching user data:", err);
+            }
         }
 
         // Mobile menu toggle
