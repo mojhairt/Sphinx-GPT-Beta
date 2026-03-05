@@ -1,5 +1,5 @@
-flask
+fastapi
+uvicorn
 torch
 transformers
-gunicorn
-safetensors
+sentencepiece
