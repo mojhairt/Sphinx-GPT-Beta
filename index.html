@@ -337,7 +337,8 @@
                         };
 
                         const readableLabel = labelMap[pred.label] || pred.label;
-                        responseMsg = `تصنيف المسألة: **${readableLabel}** (بنسبة ثقة ${confidence}%)`;
+                        // Only display the mathematical subject name
+                        responseMsg = readableLabel;
                     } else {
                         responseMsg = "لم أتمكن من تصنيف المسألة.";
                     }
