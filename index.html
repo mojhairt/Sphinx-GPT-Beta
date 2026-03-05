@@ -299,12 +299,17 @@
                 chatMessages.scrollTop = chatMessages.scrollHeight;
 
                 try {
-                    const res = await fetch('http://127.0.0.1:8000/classify', {
+                    // Endpoint of the Hugging Face Inference API
+                    const API_URL = "https://api-inference.huggingface.co/models/KHAIRY5/Sphinx-SCA";
+                    const HEADERS = {
+                        "Authorization": "Bearer hf_xxxxxxxxxxxxx",
+                        "Content-Type": "application/json"
+                    };
+
+                    const res = await fetch(API_URL, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ text: userQuery })
+                        headers: HEADERS,
+                        body: JSON.stringify({ inputs: userQuery })
                     });
 
                     if (!res.ok) {
@@ -314,14 +319,12 @@
                     const data = await res.json();
                     let responseMsg = '';
 
-                    // Check if there was an error from the backend side
+                    // The Inference API might return an error object or an array of predictions
                     if (data.error) {
                         responseMsg = `⚠️ Error: ${data.error}`;
-                    } else if (data.prediction && Array.isArray(data.prediction) && data.prediction.length > 0) {
-                        // Extract label and score
-                        const pred = data.prediction[0];
-                        // Convert score to percentage
-                        const confidence = (pred.score * 100).toFixed(1);
+                    } else if (Array.isArray(data) && data.length > 0 && Array.isArray(data[0]) && data[0].length > 0) {
+                        // Correct extraction for Hugging Face typical response: [[{"label": "...", "score": ...}]]
+                        const pred = data[0][0];
 
                         // Map the raw model labels (LABEL_0, etc.) to human-readable English names
                         const labelMap = {
@@ -339,6 +342,15 @@
                         const readableLabel = labelMap[pred.label] || pred.label;
                         // Only display the mathematical subject name
                         responseMsg = readableLabel;
+                    } else if (Array.isArray(data) && data.length > 0 && data[0].label) {
+                        // Alternative structure: [{"label": "...", "score": ...}]
+                        const pred = data[0];
+                        const labelMap = {
+                            "LABEL_0": "Algebra", "LABEL_1": "Calculus", "LABEL_2": "Linear Algebra",
+                            "LABEL_3": "Matrix", "LABEL_4": "Probability", "LABEL_5": "Statistics",
+                            "LABEL_6": "Geometry", "LABEL_7": "Discrete Math", "LABEL_8": "Word Problem"
+                        };
+                        responseMsg = labelMap[pred.label] || pred.label;
                     } else {
                         responseMsg = "لم أتمكن من تصنيف المسألة.";
                     }
@@ -355,7 +367,7 @@
                     typingDiv.remove();
 
                     console.error("Fetch error:", error);
-                    const errorMsg = "عذراً، لا يمكنني الاتصال بخادم الذكاء الاصطناعي حالياً. تأكد من تشغيل الخادم(صيانة).";
+                    const errorMsg = "عذراً، لا يمكنني الاتصال بخادم الذكاء الاصطناعي حالياً. تأكد من اتصالك بالإنترنت.";
                     addMessage(errorMsg, 'ai');
                     // saveMessageToSupabase(errorMsg, 'ai');
                 }

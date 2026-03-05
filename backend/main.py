@@ -21,11 +21,11 @@ MODEL_PATH = "KHAIRY5/Sphinx-SCA"
 
 # محاولة تحميل الموديل عند بدء تشغيل الخادم
 try:
-    print("جاري تحميل الموديل من Hugging Face، يرجى الانتظار...")
+    print("Loading model from Hugging Face, please wait...")
     classifier = pipeline("text-classification", model=MODEL_PATH, tokenizer=MODEL_PATH)
-    print("✅ تم تحميل الموديل بنجاح!")
+    print("Model loaded successfully!")
 except Exception as e:
-    print(f"❌ حدث خطأ أثناء تحميل الموديل: {e}")
+    print(f"Error loading the model: {e}")
     classifier = None
 
 class MathProblem(BaseModel):
