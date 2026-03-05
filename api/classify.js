@@ -18,11 +18,17 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Missing inputs field' });
     }
 
+    const token = process.env.HF_TOKEN;
+    if (!token) {
+        return res.status(500).json({ error: 'HF_TOKEN environment variable is not set on the server.' });
+    }
+
     try {
-        const response = await fetch('https://router.huggingface.co/models/KHAIRY5/Sphinx-SCA', {
+        // New HuggingFace router URL format
+        const response = await fetch('https://router.huggingface.co/hf-inference/models/KHAIRY5/Sphinx-SCA', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${process.env.VITE_HF_TOKEN}`,
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ inputs })
