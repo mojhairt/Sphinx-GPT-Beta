@@ -921,11 +921,12 @@ body {
 .chat-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 20px 20px 100px 20px;
-    /* Extra bottom padding for the input */
+    padding: 20px 20px 120px 20px;
+    /* Extra bottom padding to ensure messages aren't hidden behind the floating input */
     display: flex;
     flex-direction: column;
     gap: 24px;
+    scroll-behavior: smooth;
 
     /* Hide scrollbar for cleaner look but keep functionality */
     -ms-overflow-style: none;
