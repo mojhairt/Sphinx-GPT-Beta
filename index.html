@@ -322,7 +322,22 @@
                         const pred = data.prediction[0];
                         // Convert score to percentage
                         const confidence = (pred.score * 100).toFixed(1);
-                        responseMsg = `تصنيف المسألة: **${pred.label}** (بنسبة ثقة ${confidence}%)`;
+
+                        // Map the raw model labels (LABEL_0, etc.) to human-readable English names
+                        const labelMap = {
+                            "LABEL_0": "Algebra",
+                            "LABEL_1": "Calculus",
+                            "LABEL_2": "Linear Algebra",
+                            "LABEL_3": "Matrix",
+                            "LABEL_4": "Probability",
+                            "LABEL_5": "Statistics",
+                            "LABEL_6": "Geometry",
+                            "LABEL_7": "Discrete Math",
+                            "LABEL_8": "Word Problem"
+                        };
+
+                        const readableLabel = labelMap[pred.label] || pred.label;
+                        responseMsg = `تصنيف المسألة: **${readableLabel}** (بنسبة ثقة ${confidence}%)`;
                     } else {
                         responseMsg = "لم أتمكن من تصنيف المسألة.";
                     }
