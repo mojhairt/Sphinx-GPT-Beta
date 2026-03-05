@@ -299,16 +299,12 @@
                 chatMessages.scrollTop = chatMessages.scrollHeight;
 
                 try {
-                    // Endpoint of the Hugging Face Inference API
-                    const API_URL = "https://api-inference.huggingface.co/models/KHAIRY5/Sphinx-SCA";
-                    const HEADERS = {
-                        "Authorization": "Bearer hf_xxxxxxxxxxxxx",
-                        "Content-Type": "application/json"
-                    };
-
-                    const res = await fetch(API_URL, {
+                    // Call our Vercel serverless function (proxy for HuggingFace API)
+                    const res = await fetch('/api/classify', {
                         method: 'POST',
-                        headers: HEADERS,
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
                         body: JSON.stringify({ inputs: userQuery })
                     });
 
