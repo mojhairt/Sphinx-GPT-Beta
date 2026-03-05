@@ -311,8 +311,8 @@ body {
 }
 
 .hero-avatar {
-    width: 250px;
-    height: 250px;
+    width: 210px;
+    height: 210px;
     object-fit: contain;
     filter: drop-shadow(0 0 25px rgba(224, 112, 46, 0.6)) drop-shadow(0 10px 15px rgba(0, 0, 0, 0.5));
     animation: float 4s ease-in-out infinite;
