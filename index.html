@@ -299,13 +299,14 @@
                 chatMessages.scrollTop = chatMessages.scrollHeight;
 
                 try {
-                    // Model not supported by HuggingFace Inference API - using local FastAPI backend
-                    const res = await fetch('http://127.0.0.1:8000/classify', {
+                    // Fetching from HuggingFace Inference API
+                    const res = await fetch('https://api-inference.huggingface.co/models/KHAIRY5/Sphinx-SCA', {
                         method: 'POST',
                         headers: {
+                            "Authorization": "Bearer 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",
                             "Content-Type": "application/json"
                         },
-                        body: JSON.stringify({ text: userQuery })
+                        body: JSON.stringify({ inputs: userQuery })
                     });
 
                     if (!res.ok) {
