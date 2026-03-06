@@ -5,10 +5,8 @@
     --bg-orange: #E0702E;
     --bg-light: #E6E3DA;
     --text-black: #111827;
-    /* Darker, richer black */
     --text-white: #FFFFFF;
     --text-gray: #4B5563;
-    /* Softer professional gray */
     --hover-dark: #D4CDBC;
 }
 
@@ -139,6 +137,8 @@ body {
 .mobile-menu-btn .material-symbols-outlined {
     font-size: 32px;
 }
+
+
 
 /* User Profile Container */
 .profile-container {
@@ -448,32 +448,26 @@ body {
 
 /* Search Container — Premium Card Style */
 .search-container {
-    background: rgba(255, 255, 255, 0.97);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.6);
+    background-color: #FFFFFF !important;
+    border: 1px solid rgba(0, 0, 0, 0.12);
     width: 100%;
     max-width: 760px;
     border-radius: 24px;
     display: flex;
     flex-direction: column;
     padding: 18px 18px 14px 22px;
-    box-shadow:
-        0 8px 32px rgba(0, 0, 0, 0.18),
-        0 2px 8px rgba(0, 0, 0, 0.08),
-        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
     transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     margin-top: 16px;
     position: relative;
+    z-index: 5;
 }
 
 .search-container:focus-within {
-    box-shadow:
-        0 16px 48px rgba(0, 0, 0, 0.22),
-        0 0 0 3px rgba(255, 255, 255, 0.35),
-        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.18);
     transform: translateY(-3px);
-    background: rgba(255, 255, 255, 1);
+    background-color: #FFFFFF !important;
+    border-color: var(--bg-orange);
 }
 
 /* Textarea replaces plain input */
@@ -967,6 +961,13 @@ body {
     object-fit: contain;
 }
 
+/* Replaced duplicate search-container with message-avatar styling */
+.message-avatar img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+}
+
 .message-content {
     padding: 18px 24px;
     border-radius: 24px;
@@ -1005,7 +1006,6 @@ body {
     font-size: 18px;
     font-weight: 700;
     color: var(--bg-orange);
-    text-shadow: 0 1px 1px rgba(224, 112, 46, 0.2);
 }
 
 /* Specific styling for the AI label response (bolding) */
@@ -1060,13 +1060,14 @@ body {
 
 /* Override some search container styles when in chat mode */
 .search-container.chat-mode {
+    background-color: #FFFFFF !important;
     width: 100%;
     max-width: 800px;
     /* Keep consistent with hero size */
     margin-top: 0;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
     /* stronger shadow to lift off background */
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .chat-disclaimer {
