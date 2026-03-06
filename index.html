@@ -286,7 +286,7 @@
                 chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll
             }
 
-            // Simulated AI Response Function (Now connected to real Backend)
+            // Simulated AI Response Function (Connected to local Backend)
             async function simulateAIResponse(userQuery) {
                 // Add a temporary typing indicator
                 const typingDiv = document.createElement('div');
@@ -299,9 +299,8 @@
                 chatMessages.scrollTop = chatMessages.scrollHeight;
 
                 try {
-                    // Fetching from your Render Backend
-                    // الرابط الصحيح الذي يعالج الطلبات في الـ Backend هو /classify
-                    const res = await fetch('https://sphinx-model.onrender.com/classify', {
+                    // Fetching from Vercel Serverless Function (FastAPI)
+                    const res = await fetch('/api/chat', {
                         method: 'POST',
                         headers: {
                             "Content-Type": "application/json"
@@ -332,11 +331,10 @@
                     if (data.error) {
                         responseMsg = `⚠️ Error: ${data.error}`;
                     } else if (data.prediction && Array.isArray(data.prediction) && data.prediction.length > 0) {
-                        // Assuming format {"prediction": [{"label": "...", "score": ...}]}
                         let pred = data.prediction[0];
-                        if (Array.isArray(pred)) pred = pred[0]; // In case it's a nested array
+                        if (Array.isArray(pred)) pred = pred[0];
                         responseMsg = labelMap[pred.label] || pred.label;
-                    } else if (data.response) { // in case the new /chat endpoint returns { "response": "..." }
+                    } else if (data.response) {
                         responseMsg = data.response;
                     } else if (Array.isArray(data) && data.length > 0 && Array.isArray(data[0]) && data[0].length > 0) {
                         const pred = data[0][0];
@@ -360,9 +358,8 @@
                     typingDiv.remove();
 
                     console.error("Fetch error:", error);
-                    const errorMsg = "عذراً، لا يمكنني الاتصال بخادم الذكاء الاصطناعي حالياً. تأكد من اتصالك بالإنترنت.";
+                    const errorMsg = "عذراً، لا يمكنني الاتصال بخادم الذكاء الاصطناعي حالياً. تأكد من تشغيل الخادم المحلي.";
                     addMessage(errorMsg, 'ai');
-                    // saveMessageToSupabase(errorMsg, 'ai');
                 }
             }
 
