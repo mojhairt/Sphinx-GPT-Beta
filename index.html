@@ -263,9 +263,6 @@
                     // Add the user's message
                     addMessage(initialMessage, 'user');
                     saveMessageToSupabase(initialMessage, 'user');
-
-                    // Simulate AI loading and response
-                    simulateAIResponse(initialMessage);
                 }, 400); // 400ms matches the CSS transition duration
             }
 
@@ -299,83 +296,6 @@
                 chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll
             }
 
-            // Simulated AI Response Function (Connected to local Backend)
-            async function simulateAIResponse(userQuery) {
-                // Add a temporary typing indicator
-                const typingDiv = document.createElement('div');
-                typingDiv.classList.add('message', 'ai-message', 'typing-indicator');
-                typingDiv.innerHTML = `
-                    <div class="message-avatar"><img src="logo.png" alt="AI"></div>
-                    <div class="message-content"><p>Thinking...</p></div>
-                `;
-                chatMessages.appendChild(typingDiv);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-
-                try {
-                    // Fetching from Local Server running the heavy Model
-                    const res = await fetch('http://127.0.0.1:8000/chat', {
-                        method: 'POST',
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        // يتم إرسال النص، الخادم يستخدم 'text'
-                        body: JSON.stringify({ text: userQuery })
-                    });
-
-                    if (!res.ok) {
-                        throw new Error(`Server returned status: ${res.status}`);
-                    }
-
-                    const data = await res.json();
-                    let responseMsg = '';
-
-                    const labelMap = {
-                        "LABEL_0": "Algebra",
-                        "LABEL_1": "Calculus",
-                        "LABEL_2": "Linear Algebra",
-                        "LABEL_3": "Matrix",
-                        "LABEL_4": "Probability",
-                        "LABEL_5": "Statistics",
-                        "LABEL_6": "Geometry",
-                        "LABEL_7": "Discrete Math",
-                        "LABEL_8": "Word Problem"
-                    };
-
-                    if (data.error) {
-                        responseMsg = `⚠️ Error: ${data.error}`;
-                    } else if (data.prediction && Array.isArray(data.prediction) && data.prediction.length > 0) {
-                        let pred = data.prediction[0];
-                        if (Array.isArray(pred)) pred = pred[0];
-                        responseMsg = labelMap[pred.label] || pred.label;
-                    } else if (data.response) {
-                        responseMsg = data.response;
-                    } else if (Array.isArray(data) && data.length > 0 && Array.isArray(data[0]) && data[0].length > 0) {
-                        const pred = data[0][0];
-                        responseMsg = labelMap[pred.label] || pred.label;
-                    } else if (Array.isArray(data) && data.length > 0 && data[0].label) {
-                        const pred = data[0];
-                        responseMsg = labelMap[pred.label] || pred.label;
-                    } else {
-                        responseMsg = "لم أتمكن من تصنيف المسألة.";
-                    }
-
-                    // Remove typing indicator
-                    typingDiv.remove();
-
-                    // Add actual response
-                    addMessage(responseMsg, 'ai');
-                    saveMessageToSupabase(responseMsg, 'ai');
-
-                } catch (error) {
-                    // Remove typing indicator on error
-                    typingDiv.remove();
-
-                    console.error("Fetch error:", error);
-                    const errorMsg = "عذراً، لا يمكنني الاتصال بخادم الذكاء الاصطناعي حالياً. تأكد من تشغيل الخادم المحلي.";
-                    addMessage(errorMsg, 'ai');
-                }
-            }
-
             // Event Listeners for Hero Search
             heroSendBtn.addEventListener('click', () => startChat(heroInput.value));
             heroInput.addEventListener('keydown', (e) => {
@@ -395,7 +315,6 @@
                     saveMessageToSupabase(msg, 'user');
                     chatInput.value = '';
                     autoResize(chatInput);
-                    simulateAIResponse(msg);
                 }
             });
             chatInput.addEventListener('keydown', (e) => {
@@ -407,7 +326,6 @@
                         saveMessageToSupabase(msg, 'user');
                         chatInput.value = '';
                         autoResize(chatInput);
-                        simulateAIResponse(msg);
                     }
                 }
             });
