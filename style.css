@@ -292,8 +292,7 @@ body.app-page {
     }
 
     .main-sidebar.collapsed .sidebar-nav-item {
-        justify-content: center;
-        padding: 12px;
+        display: none;
     }
 }
 
