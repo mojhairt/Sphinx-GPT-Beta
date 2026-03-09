@@ -889,18 +889,62 @@ body.app-page {
 @media (max-width: 768px) {
     .header {
         height: 70px;
-        padding: 0 20px;
+        padding: 0 15px;
+        gap: 10px;
     }
 
     .logo-text {
-        font-size: 20px;
+        font-size: 18px;
     }
 
     .logo-icon {
-        width: 50px;
-        height: 50px;
+        width: 45px;
+        height: 45px;
         margin-top: 5px;
-        /* Adjusting position down */
+    }
+
+    /* Main Sidebar goes Off-Canvas */
+    .main-sidebar {
+        position: fixed;
+        top: 0;
+        left: -320px;
+        width: 280px !important;
+        height: 100vh;
+        z-index: 1000;
+        box-shadow: 4px 0 25px rgba(0, 0, 0, 0.15);
+        transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .main-sidebar.mobile-open {
+        left: 0;
+    }
+
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(3px);
+        z-index: 999;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .sidebar-overlay.active {
+        display: block;
+        opacity: 1;
+    }
+
+    .mobile-left-menu-btn {
+        display: flex !important;
+        background: none;
+        border: none;
+        color: var(--text-black);
+        padding: 5px;
+        cursor: pointer;
     }
 
     /* Mobile Navigation */
@@ -1015,7 +1059,7 @@ body.app-page {
 
 @media (max-width: 480px) {
     .hero-title {
-        font-size: clamp(40px, 12vw, 60px);
+        font-size: clamp(32px, 10vw, 50px);
         letter-spacing: 2px;
     }
 
@@ -1031,12 +1075,14 @@ body.app-page {
     }
 
     .search-container {
-        padding: 12px 10px 8px 14px;
+        padding: 10px 10px 8px 12px;
         border-radius: 16px;
+        margin-top: 10px;
     }
 
     .search-input {
         font-size: 14px;
+        min-height: 24px;
     }
 }
 
@@ -1402,8 +1448,8 @@ body.app-page {
 }
 
 .coming-soon-icon {
-    width: 80px;
-    height: 80px;
+    width: 60px;
+    height: 60px;
     background: rgba(224, 112, 46, 0.1);
     color: var(--bg-orange);
     border-radius: 50%;
