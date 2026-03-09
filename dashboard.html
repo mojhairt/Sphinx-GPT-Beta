@@ -285,7 +285,47 @@
 
         @media (max-width: 900px) {
             .sidebar {
+                position: fixed;
+                top: 0;
+                left: -320px;
+                width: 280px !important;
+                height: 100vh;
+                z-index: 1000;
+                box-shadow: 4px 0 25px rgba(0, 0, 0, 0.15);
+                transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+
+            .sidebar.mobile-open {
+                left: 0;
+            }
+
+            .sidebar-overlay {
                 display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.4);
+                backdrop-filter: blur(3px);
+                z-index: 999;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+
+            .sidebar-overlay.active {
+                display: block;
+                opacity: 1;
+            }
+
+            .mobile-left-menu-btn {
+                display: flex !important;
+                background: none;
+                border: none;
+                color: var(--text-black);
+                padding: 5px;
+                cursor: pointer;
+                margin-right: 15px;
             }
         }
 
@@ -339,6 +379,9 @@
 
 <body class="dashboard-page">
     <header class="header">
+        <button class="mobile-left-menu-btn" id="mobile-left-menu-btn" style="display: none;">
+            <span class="material-symbols-outlined" style="font-size: 28px;">menu</span>
+        </button>
         <div class="logo-container" onclick="window.location.href='index.html'">
             <img src="logo.png" alt="Sphinx-SCA Logo" class="logo-icon">
             <div class="logo-text">
@@ -376,8 +419,11 @@
         </nav>
     </header>
 
+    <!-- Overlay for mobile sidebar -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
     <div class="dashboard-layout">
-        <aside class="sidebar">
+        <aside class="sidebar" id="dashboard-sidebar">
             <ul class="sidebar-menu">
                 <li class="sidebar-item">
                     <a href="dashboard.html" class="sidebar-link active">
@@ -642,7 +688,7 @@
                 }
             }
 
-            // Mobile menu toggle
+            // Mobile menu toggle (Right Nav)
             const menuBtn = document.getElementById('mobile-menu-btn');
             const nav = document.querySelector('.nav');
 
@@ -655,6 +701,25 @@
                     } else {
                         icon.textContent = 'menu';
                     }
+                });
+            }
+
+            // Mobile left menu toggle (Sidebar)
+            const mobileLeftMenuBtn = document.getElementById('mobile-left-menu-btn');
+            const dashboardSidebar = document.getElementById('dashboard-sidebar');
+            const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+            if (mobileLeftMenuBtn && dashboardSidebar) {
+                mobileLeftMenuBtn.addEventListener('click', () => {
+                    dashboardSidebar.classList.add('mobile-open');
+                    if (sidebarOverlay) sidebarOverlay.classList.add('active');
+                });
+            }
+
+            if (sidebarOverlay && dashboardSidebar) {
+                sidebarOverlay.addEventListener('click', () => {
+                    dashboardSidebar.classList.remove('mobile-open');
+                    sidebarOverlay.classList.remove('active');
                 });
             }
 

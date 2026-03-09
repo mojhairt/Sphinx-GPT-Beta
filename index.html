@@ -60,9 +60,15 @@
             </div>
         </aside>
 
+        <!-- Overlay for mobile sidebar -->
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
         <!-- Main Content Area -->
         <div class="main-content-wrapper">
             <header class="header">
+                <button class="mobile-left-menu-btn" id="mobile-left-menu-btn" style="display: none;">
+                    <span class="material-symbols-outlined" style="font-size: 28px;">menu</span>
+                </button>
                 <div class="logo-container">
                     <img src="logo.png" alt="Sphinx-SCA Logo" class="logo-icon">
                     <div class="logo-text">
@@ -226,10 +232,32 @@
             // --- Sidebar Toggle Logic ---
             const mainSidebar = document.getElementById('main-sidebar');
             const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+            const mobileLeftMenuBtn = document.getElementById('mobile-left-menu-btn');
+            const sidebarOverlay = document.getElementById('sidebar-overlay');
 
             if (sidebarToggleBtn && mainSidebar) {
                 sidebarToggleBtn.addEventListener('click', () => {
-                    mainSidebar.classList.toggle('collapsed');
+                    // On mobile, the button inside sidebar will just close it
+                    if (window.innerWidth <= 768) {
+                        mainSidebar.classList.remove('mobile-open');
+                        if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+                    } else {
+                        mainSidebar.classList.toggle('collapsed');
+                    }
+                });
+            }
+
+            if (mobileLeftMenuBtn && mainSidebar) {
+                mobileLeftMenuBtn.addEventListener('click', () => {
+                    mainSidebar.classList.add('mobile-open');
+                    if (sidebarOverlay) sidebarOverlay.classList.add('active');
+                });
+            }
+
+            if (sidebarOverlay && mainSidebar) {
+                sidebarOverlay.addEventListener('click', () => {
+                    mainSidebar.classList.remove('mobile-open');
+                    sidebarOverlay.classList.remove('active');
                 });
             }
 
