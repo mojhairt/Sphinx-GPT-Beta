@@ -138,54 +138,40 @@
                     </div>
 
                     <p class="hero-subtitle">Math Solver &amp; AI Assistant</p>
-
-                    <div class="search-container">
-                        <textarea class="search-input" placeholder="Ask me anything about math...." rows="1"></textarea>
-                        <div class="search-footer">
-                            <div class="search-tools">
-                                <button class="icon-button mic-btn" title="Voice Input">
-                                    <span class="material-symbols-outlined">mic</span>
-                                </button>
-                                <button class="icon-button upload-btn" title="Upload Image">
-                                    <span class="material-symbols-outlined">image</span>
-                                </button>
-                            </div>
-                            <button class="send-btn" title="Send Request">
-                                <span class="material-symbols-outlined send-icon">arrow_upward</span>
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </main>
 
             <!-- Chat Interface (Hidden by default) -->
             <main class="chat-interface" id="chat-interface" style="display: none;">
-                <div class="chat-messages" id="chat-messages">
-                    <!-- Messages will be appended here -->
-                </div>
-
-                <div class="chat-input-wrapper">
-                    <div class="search-container chat-mode">
-                        <textarea class="search-input" id="chat-input" placeholder="Ask me anything about math...."
-                            rows="1"></textarea>
-                        <div class="search-footer">
-                            <div class="search-tools">
-                                <button class="icon-button mic-btn" title="Voice Input">
-                                    <span class="material-symbols-outlined">mic</span>
-                                </button>
-                                <button class="icon-button upload-btn" title="Upload Image">
-                                    <span class="material-symbols-outlined">image</span>
-                                </button>
-                            </div>
-                            <button class="send-btn" id="chat-send-btn" title="Send Request">
-                                <span class="material-symbols-outlined send-icon">arrow_upward</span>
-                            </button>
-                        </div>
+                <div class="chat-messages-wrapper" id="chat-messages-wrapper">
+                    <div class="chat-messages" id="chat-messages">
+                        <!-- Messages will be appended here -->
                     </div>
-                    <div class="chat-disclaimer">Sphinx-SCA BETA can make mistakes. Always verify important
-                        calculations.</div>
                 </div>
             </main>
+
+            <!-- Floating Unified Search Container -->
+            <div class="floating-search-wrapper" id="floating-search-wrapper">
+                <div class="search-container">
+                    <textarea class="search-input" id="main-search-input" placeholder="Ask me anything about math...."
+                        rows="1"></textarea>
+                    <div class="search-footer">
+                        <div class="search-tools">
+                            <button class="icon-button mic-btn" title="Voice Input">
+                                <span class="material-symbols-outlined">mic</span>
+                            </button>
+                            <button class="icon-button upload-btn" title="Upload Image">
+                                <span class="material-symbols-outlined">image</span>
+                            </button>
+                        </div>
+                        <button class="send-btn" id="main-send-btn" title="Send Request">
+                            <span class="material-symbols-outlined send-icon">arrow_upward</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="chat-disclaimer">Sphinx-SCA BETA can make mistakes. Always verify important calculations.
+                </div>
+            </div>
 
 
             <!-- Coming Soon Modal -->
@@ -373,46 +359,24 @@
             // --- Chat Interface Logic ---
             const heroSection = document.querySelector('.hero');
             const chatInterface = document.getElementById('chat-interface');
-            const heroInput = document.querySelector('.hero .search-input');
-            const heroSendBtn = document.querySelector('.hero .send-btn');
-
-            const chatInput = document.getElementById('chat-input');
-            const chatSendBtn = document.getElementById('chat-send-btn');
+            const searchInput = document.getElementById('main-search-input');
+            const sendBtn = document.getElementById('main-send-btn');
             const chatMessages = document.getElementById('chat-messages');
 
-            // Auto-resize textareas
+            let isChatActive = false;
+
+            // Auto-resize textarea
             function autoResize(el) {
                 el.style.height = 'auto';
                 el.style.height = Math.min(el.scrollHeight, 180) + 'px';
             }
-            heroInput.addEventListener('input', () => autoResize(heroInput));
-            chatInput.addEventListener('input', () => autoResize(chatInput));
-
-            // Function to transition to chat
-            function startChat(initialMessage) {
-                if (!initialMessage.trim()) return;
-
-                // Add animation class to hero
-                heroSection.classList.add('animate-out');
-
-                // Wait for animation to finish before switching displays
-                setTimeout(() => {
-                    heroSection.style.display = 'none';
-                    chatInterface.style.display = 'flex';
-                    chatInput.focus();
-
-                    // Add the user's message
-                    addMessage(initialMessage, 'user');
-                    saveMessageToSupabase(initialMessage, 'user');
-                }, 400); // 400ms matches the CSS transition duration
-            }
+            searchInput.addEventListener('input', () => autoResize(searchInput));
 
             // Function to add a message bubble
             function addMessage(text, sender, userName = 'User') {
                 const msgDiv = document.createElement('div');
                 msgDiv.classList.add('message', `${sender}-message`);
 
-                // For AI, we can add an icon. For user, just the bubble.
                 if (sender === 'ai') {
                     msgDiv.innerHTML = `
                         <div class="message-avatar">
@@ -434,40 +398,46 @@
                 }
 
                 chatMessages.appendChild(msgDiv);
-                chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll
+                // Auto-scroll the chat messages wrapper
+                const scrollWrapper = document.getElementById('chat-interface');
+                scrollWrapper.scrollTop = scrollWrapper.scrollHeight;
             }
 
-            // Event Listeners for Hero Search
-            heroSendBtn.addEventListener('click', () => startChat(heroInput.value));
-            heroInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    startChat(heroInput.value);
-                    heroInput.value = '';
-                    autoResize(heroInput);
-                }
-            });
+            function handleSend() {
+                const msg = searchInput.value;
+                if (!msg.trim()) return;
 
-            // Event Listeners for Chat Interface Search
-            chatSendBtn.addEventListener('click', () => {
-                const msg = chatInput.value;
-                if (msg.trim()) {
-                    addMessage(msg, 'user');
-                    saveMessageToSupabase(msg, 'user');
-                    chatInput.value = '';
-                    autoResize(chatInput);
-                }
-            });
-            chatInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    const msg = chatInput.value;
-                    if (msg.trim()) {
+                if (!isChatActive) {
+                    isChatActive = true;
+                    // Add animation class to hero
+                    heroSection.classList.add('animate-out');
+
+                    // Wait for animation to finish before switching displays
+                    setTimeout(() => {
+                        heroSection.style.display = 'none';
+                        chatInterface.style.display = 'flex';
+                        searchInput.focus();
+
+                        // Add the user's message
                         addMessage(msg, 'user');
                         saveMessageToSupabase(msg, 'user');
-                        chatInput.value = '';
-                        autoResize(chatInput);
-                    }
+                        searchInput.value = '';
+                        autoResize(searchInput);
+                    }, 400); // 400ms matches the CSS transition duration
+                } else {
+                    addMessage(msg, 'user');
+                    saveMessageToSupabase(msg, 'user');
+                    searchInput.value = '';
+                    autoResize(searchInput);
+                }
+            }
+
+            // Event Listeners for Unified Search
+            sendBtn.addEventListener('click', handleSend);
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
                 }
             });
 
