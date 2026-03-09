@@ -12,6 +12,16 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
+    <!-- Theme Initialization Script (Before render) -->
+    <script>
+        (function () {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark-theme');
+            }
+        })();
+    </script>
+
     <!-- Material Icons -->
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
@@ -378,6 +388,11 @@
 </head>
 
 <body class="dashboard-page">
+    <script>
+        if (document.documentElement.classList.contains('dark-theme')) {
+            document.body.classList.add('dark-theme');
+        }
+    </script>
     <header class="header">
         <button class="mobile-left-menu-btn" id="mobile-left-menu-btn" style="display: none;">
             <span class="material-symbols-outlined" style="font-size: 28px;">menu</span>
@@ -391,8 +406,9 @@
         </div>
 
         <nav class="nav">
-            <a href="index.html" class="nav-link">Home</a>
-            <a href="dashboard.html" class="nav-link">Dashboard</a>
+            <button class="nav-theme-toggle" id="theme-toggle-btn" title="Toggle Dark/Light Mode">
+                <span class="material-symbols-outlined theme-icon">dark_mode</span>
+            </button>
             <a href="login.html" class="nav-link" id="nav-login-btn">log in</a>
 
             <div class="profile-container" id="nav-profile-container">
@@ -406,7 +422,6 @@
                         <span class="material-symbols-outlined">settings</span>
                         Settings
                     </a>
-                    <div class="dropdown-divider"></div>
                     <a href="#" class="dropdown-item logout" id="logout-btn">
                         <span class="material-symbols-outlined">logout</span>
                         Log Out
@@ -422,6 +437,12 @@
     <div class="dashboard-layout">
         <aside class="sidebar" id="dashboard-sidebar">
             <ul class="sidebar-menu">
+                <li class="sidebar-item">
+                    <a href="index.html" class="sidebar-link">
+                        <span class="material-symbols-outlined">home</span>
+                        Home
+                    </a>
+                </li>
                 <li class="sidebar-item">
                     <a href="dashboard.html" class="sidebar-link active">
                         <span class="material-symbols-outlined">grid_view</span>
@@ -704,7 +725,29 @@
                 });
             }
 
-            // Profile dropdown toggle on mobile
+            // --- Profile dropdown & Theme logic ---
+            const themeToggleBtn = document.getElementById('theme-toggle-btn');
+            const themeIcon = themeToggleBtn ? themeToggleBtn.querySelector('.theme-icon') : null;
+
+            // Update UI based on current theme
+            function updateThemeUI() {
+                if (!themeIcon) return;
+                const isDark = document.body.classList.contains('dark-theme');
+                themeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
+            }
+            updateThemeUI();
+
+            if (themeToggleBtn) {
+                themeToggleBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    document.documentElement.classList.toggle('dark-theme');
+                    document.body.classList.toggle('dark-theme');
+                    const isDark = document.body.classList.contains('dark-theme');
+                    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                    updateThemeUI();
+                });
+            }
+
             const profileContainer = document.getElementById('nav-profile-container');
             if (profileContainer) {
                 profileContainer.addEventListener('click', (e) => {
