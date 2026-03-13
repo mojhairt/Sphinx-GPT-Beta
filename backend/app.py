@@ -115,7 +115,9 @@ FRONTEND_DIR = PROJECT_ROOT
 async def home():
     return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
 
-app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+# Mount the entire root directory as static so links like /style.css work
+# But keep it after specific routes so it doesn't shadow them
+app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="static")
 
 # ─────────────────────────────────────────────
 # REQUEST MODELS
