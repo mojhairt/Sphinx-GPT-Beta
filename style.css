@@ -1056,37 +1056,56 @@ body.dark-theme .floating-search-wrapper {
     }
 
     /* Hero adjustments */
+    .hero {
+        padding: 5px 15px;
+        /* Less padding to shift everything up */
+    }
+
+    .hero-avatar {
+        width: 120px;
+        /* Reduced from default 200px */
+        height: 120px;
+    }
+
     .hero-title {
-        font-size: clamp(40px, 8vw, 80px);
-        /* Smaller for mobile */
-        letter-spacing: 4px;
-        filter: drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.5)) drop-shadow(0px 0px 15px rgba(224, 112, 46, 0.3));
+        font-size: clamp(28px, 6vw, 45px);
+        /* Much smaller, more professional */
+        letter-spacing: 2px;
+        filter: drop-shadow(0px 3px 6px rgba(0, 0, 0, 0.4)) drop-shadow(0px 0px 10px rgba(224, 112, 46, 0.3));
     }
 
     .hero-subtitle {
-        padding: 8px 20px;
-        margin-bottom: 25px;
-        font-size: 13px;
-        letter-spacing: 2px;
+        padding: 6px 16px;
+        margin-bottom: 20px;
+        font-size: 11px;
+        letter-spacing: 1.5px;
     }
 
     .pharaonic-line {
-        width: 80%;
+        width: 70%;
+        margin-bottom: 8px;
     }
 
+    /* Refined Input Box for Mobile (768px) */
     .search-container {
-        padding: 14px 14px 10px 16px;
-        border-radius: 18px;
+        padding: 10px 12px 8px 14px;
+        border-radius: 16px;
     }
 
     .search-input {
-        font-size: 15px;
+        font-size: 14px;
+        min-height: 22px;
     }
 
     .send-btn {
-        width: 36px;
-        height: 36px;
+        width: 32px;
+        height: 32px;
     }
+
+    .send-icon {
+        font-size: 16px !important;
+    }
+
 
     .footer {
         flex-direction: column;
@@ -1117,31 +1136,69 @@ body.dark-theme .floating-search-wrapper {
 }
 
 @media (max-width: 480px) {
+
+    /* Extreme Mobile Optims */
+    .hero-avatar {
+        width: 100px;
+        height: 100px;
+    }
+
     .hero-title {
-        font-size: clamp(32px, 10vw, 50px);
-        letter-spacing: 2px;
+        font-size: clamp(24px, 8vw, 36px);
+        letter-spacing: 1.5px;
     }
 
     .hero-subtitle {
-        padding: 6px 16px;
-        font-size: 11px;
-        letter-spacing: 1.5px;
-        margin-bottom: 20px;
+        padding: 5px 12px;
+        font-size: 10px;
+        letter-spacing: 1px;
+        margin-bottom: 15px;
     }
 
     .pharaonic-line {
-        gap: 8px;
+        gap: 6px;
     }
 
+    /* Tiny, clean input box */
     .search-container {
-        padding: 10px 10px 8px 12px;
-        border-radius: 16px;
-        margin-top: 10px;
+        padding: 8px 10px 6px 10px;
+        border-radius: 14px;
+        margin-top: 5px;
     }
 
     .search-input {
+        font-size: 13px;
+        min-height: 20px;
+    }
+
+    .icon-button {
+        width: 32px;
+        height: 32px;
+    }
+
+    .icon-button .material-symbols-outlined {
+        font-size: 18px;
+    }
+
+    /* Ultra-compact chat bubbles */
+    .message-content {
+        padding: 12px 16px;
         font-size: 14px;
-        min-height: 24px;
+    }
+
+    .ai-message .message-content {
+        font-size: 15px;
+        /* Slightly larger for AI bolded text */
+    }
+
+    .message-avatar {
+        width: 28px;
+        height: 28px;
+    }
+
+    .message-avatar img {
+        width: 18px;
+        height: 18px;
     }
 }
 
@@ -1418,13 +1475,44 @@ body.dark-theme .floating-search-wrapper {
 
 @media (max-width: 768px) {
     .chat-interface {
-        height: calc(100vh - 170px);
-        /* Adjust for mobile header/footer */
-        padding: 10px;
+        height: calc(100vh - 150px);
+        padding: 5px 10px;
+        /* Reduced vertical padding */
     }
 
     .message {
-        max-width: 95%;
+        max-width: 90%;
+        /* Let it breathe a bit more instead of hugging the edge */
+        gap: 10px;
+        /* Less space between avatar and bubble */
+    }
+
+    .message-content {
+        padding: 14px 18px;
+        /* Tighter padding inside bubbles */
+        font-size: 14px;
+        /* Default chat font size on mobile */
+        line-height: 1.5;
+    }
+
+    .ai-message .message-content {
+        font-size: 15px;
+        /* Still smaller than desktop's 18px */
+    }
+
+    .message-avatar {
+        width: 32px;
+        height: 32px;
+    }
+
+    .message-avatar img {
+        width: 20px;
+        height: 20px;
+    }
+
+    .chat-messages {
+        gap: 16px;
+        /* Less space between consecutive messages */
     }
 
     .chat-input-wrapper {
@@ -1434,7 +1522,6 @@ body.dark-theme .floating-search-wrapper {
 
     .search-container.chat-mode {
         border-radius: 20px;
-        /* match the mobile query for standard search container */
     }
 }
 
