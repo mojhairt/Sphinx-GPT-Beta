@@ -11,6 +11,8 @@ from typing import Optional
 from fastapi import FastAPI, UploadFile, File
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 # ─────────────────────────────────────────────
 #  PATH CONFIGURATION
@@ -99,6 +101,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ─────────────────────────────────────────────
+#  SERVE FRONTEND
+# ─────────────────────────────────────────────
+
+FRONTEND_DIR = os.path.join(PROJECT_ROOT)
+
+# serve index.html
+@app.get("/")
+async def home():
+    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+
+# serve static files (css / js / images)
+app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
 # ─────────────────────────────────────────────
 #  REQUEST MODELS
@@ -355,4 +371,8 @@ async def health():
 # ─────────────────────────────────────────────
 
 if __name__ == "__main__":
-    uvicorn.run("app:app", host="127.0.0.1", port=8001, reload=True)
+    uvicorn.run(
+        "backend.app:app",
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 8000))
+    )
