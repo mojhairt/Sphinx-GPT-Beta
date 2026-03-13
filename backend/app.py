@@ -40,7 +40,7 @@ else:
 try:
     from backend.llm_manager import LLMManager
 except:
-    from llm_manager import LLMManager
+    from backend.llm_manager import LLMManager
 
 try:
     llm = LLMManager()
