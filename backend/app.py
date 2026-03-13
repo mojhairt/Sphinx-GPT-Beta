@@ -21,8 +21,6 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 
 sys.path.append(PROJECT_ROOT)
-MATH_ENGINE_DIR = os.path.join(PROJECT_ROOT, "math_engine", "math_engine")
-sys.path.append(MATH_ENGINE_DIR)
 
 # ─────────────────────────────────────────────
 # ENVIRONMENT
