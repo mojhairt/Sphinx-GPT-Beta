@@ -428,28 +428,35 @@
                 searchInput.value = '';
                 autoResize(searchInput);
 
-                // 2. Connect to Flask Backend (app.py)
+                // 2. Connect to Backend
                 try {
-                    const API_URL = "https://sphinx-gpt-beta-production.up.railway.app";
+                    // Automatically detect API URL: use current origin if on Railway, or local fallback
+                    const API_URL = window.location.origin;
+
                     const response = await fetch(`${API_URL}/solve`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             question: msg,
-                            user_id: currentUserId
+                            user_id: currentUserId,
+                            history: [] // Added for compatibility with RequestModel
                         })
                     });
 
+                    if (!response.ok) throw new Error(`Server returned ${response.status}`);
+
                     const result = await response.json();
                     if (result.success) {
-                        addMessage(result.answer, 'ai');
-                        await saveMessageToSupabase(result.answer, 'ai'); // Save AI response
-                        if (currentUserId) await fetchUserData(currentUserId);
+                        const aiResponse = result.final_answer || result.answer || "I couldn't generate a clear answer.";
+                        addMessage(aiResponse, 'ai');
+                        await saveMessageToSupabase(aiResponse, 'ai'); // Save AI response
+                        if (currentUserId) fetchUserData(currentUserId);
                     } else {
-                        addMessage("Error: " + result.error, 'ai');
+                        addMessage("Something went wrong: " + (result.error || "Unknown error"), 'ai');
                     }
                 } catch (error) {
-                    addMessage("Make sure your Python server (app.py) is running!", 'ai');
+                    console.error("Fetch error:", error);
+                    addMessage("Unable to reach the server. Please ensure the backend is active.", 'ai');
                 }
             }
             // Event Listeners for Unified Search
