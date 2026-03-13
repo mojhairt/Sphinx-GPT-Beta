@@ -1,12 +1,11 @@
 """
-Sphinx-SCA — Backend API (v3)
-==============================
-Flow:
-  classify → chat? → respond naturally
-           → math? → parse → solve → steps → respond
+Sphinx-SCA — Backend API (v3 Stable)
 """
 
-import os, sys, uvicorn, logging
+import os
+import sys
+import uvicorn
+import logging
 from typing import Optional
 from fastapi import FastAPI, UploadFile, File
 from pydantic import BaseModel
@@ -15,86 +14,89 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 # ─────────────────────────────────────────────
-#  PATH CONFIGURATION
+# PATH CONFIG
 # ─────────────────────────────────────────────
 
-BASE_DIR         = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT     = os.path.dirname(BASE_DIR)
-MATH_ENGINE_PATH = os.path.join(PROJECT_ROOT, "math_engine", "math_engine")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(BASE_DIR)
 
 sys.path.append(PROJECT_ROOT)
-sys.path.append(MATH_ENGINE_PATH)
-
-folders = ["algebra", "calculus_math", "geometry", "linear_algebra",
-           "probability", "statistics_engine", "word_problems"]
-for folder in folders:
-    sys.path.append(os.path.join(MATH_ENGINE_PATH, folder))
 
 # ─────────────────────────────────────────────
-#  LLM MANAGER
+# ENVIRONMENT
+# ─────────────────────────────────────────────
+
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+if not GROQ_API_KEY:
+    print("⚠️ GROQ_API_KEY not found in environment variables")
+else:
+    print("🔑 Groq API key loaded")
+
+# ─────────────────────────────────────────────
+# LOAD LLM MANAGER
 # ─────────────────────────────────────────────
 
 try:
+    from backend.llm_manager import LLMManager
+except:
     from llm_manager import LLMManager
+
+try:
     llm = LLMManager()
     print("✅ LLM Manager loaded")
 except Exception as e:
     llm = None
-    print(f"⚠️ LLM Manager not loaded: {e}")
+    print("⚠️ LLM Manager failed:", e)
 
 # ─────────────────────────────────────────────
-#  MATH ENGINES (with fallback)
+# LOGGING
 # ─────────────────────────────────────────────
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("sphinx-sca")
+logger = logging.getLogger("sphinx")
+
+# ─────────────────────────────────────────────
+# MATH ENGINE IMPORTS
+# ─────────────────────────────────────────────
 
 try:
     from algebra.algebra_engine import solve as algebra_solve
-except ImportError:
+except:
     algebra_solve = None
-    logger.warning("⚠️  Algebra engine not found")
 
 try:
     import calculus
     calculus_solve = calculus.solve
-except ImportError:
+except:
     calculus_solve = None
-    logger.warning("⚠️  Calculus engine not found")
 
 try:
     import geometry
     geometry_solve = geometry.solve
-except ImportError:
+except:
     geometry_solve = None
-    logger.warning("⚠️  Geometry engine not found")
 
 try:
     import statistics_engine
     statistics_solve = statistics_engine.solve
-except ImportError:
+except:
     statistics_solve = None
-    logger.warning("⚠️  Statistics engine not found")
 
 try:
     import linear_algebra
     linear_algebra_solve = linear_algebra.solve
-except ImportError:
+except:
     linear_algebra_solve = None
-    logger.warning("⚠️  Linear algebra engine not found")
-
-try:
-    import word_problems
-    word_solve = word_problems.solve
-except ImportError:
-    word_solve = None
-    logger.warning("⚠️  Word problems engine not found")
 
 # ─────────────────────────────────────────────
-#  APP SETUP
+# FASTAPI APP
 # ─────────────────────────────────────────────
 
-app = FastAPI(title="Sphinx-SCA API", version="3.0.0")
+app = FastAPI(
+    title="Sphinx-SCA API",
+    version="3.0"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -103,280 +105,224 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# الصفحة الرئيسية
-@app.get("/")
-async def home():
-    return {"message": "Sphinx API is running"}
-
 # ─────────────────────────────────────────────
-#  SERVE FRONTEND
+# SERVE FRONTEND
 # ─────────────────────────────────────────────
 
-FRONTEND_DIR = os.path.join(PROJECT_ROOT)
+FRONTEND_DIR = PROJECT_ROOT
 
-# serve index.html
 @app.get("/")
 async def home():
     return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
 
-# serve static files (css / js / images)
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
 # ─────────────────────────────────────────────
-#  REQUEST MODELS
+# REQUEST MODELS
 # ─────────────────────────────────────────────
 
 class QuestionRequest(BaseModel):
     question: str
-    user_id:  Optional[str]  = None
-    history:  Optional[list] = []
+    history: Optional[list] = []
 
 class HintRequest(BaseModel):
-    question:     str
+    question: str
     problem_type: str = "algebra"
-    num_hints:    int = 3
+    num_hints: int = 3
 
 # ─────────────────────────────────────────────
-#  SOLVER HELPER
+# SOLVER HELPER
 # ─────────────────────────────────────────────
 
-def _run_solver(solver_fn, *args, **kwargs) -> dict:
-    if solver_fn is None:
-        return {"success": False, "error": "Engine not available"}
+def run_solver(fn, *args, **kwargs):
+
+    if fn is None:
+        return {"success": False, "error": "engine not available"}
+
     try:
-        result = solver_fn(*args, **kwargs)
-        if isinstance(result, dict) and result.get("error"):
-            return {"success": False, "error": result["error"]}
-        return {"success": True, **(result if isinstance(result, dict) else {"final_answer": str(result)})}
+        result = fn(*args, **kwargs)
+
+        if isinstance(result, dict):
+            return {"success": True, **result}
+
+        return {
+            "success": True,
+            "final_answer": str(result)
+        }
+
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 # ─────────────────────────────────────────────
-#  MAIN PIPELINE
+# MAIN PIPELINE
 # ─────────────────────────────────────────────
 
-def route_and_solve(question: str, history: list = None) -> dict:
-    """
-    Full pipeline:
-      classify → chat? → llm.chat()
-               → math? → parse → solve → llm.steps() → response
-    """
+def route_and_solve(question: str, history: list = None):
+
     if history is None:
         history = []
 
-    logger.info(f"📥 Question: {question}")
+    logger.info("Question: %s", question)
 
-    # ── No LLM → basic fallback ───────────────
-    if not llm:
+    if llm is None:
         return {
-            "success":      False,
-            "final_answer": None,
-            "error":        "LLM not available. Please check your API key.",
+            "success": False,
+            "error": "LLM not available"
         }
 
-    # ── Step 1: Classify ─────────────────────
+    # 1️⃣ classify
     try:
-        classification = llm.classify(question)
-        branch         = classification.get("branch",       "algebra")
-        problem_type   = classification.get("problem_type", "solve")
-        is_math        = classification.get("is_math",      True)
-        logger.info(f"🧠 branch={branch}, is_math={is_math}")
-    except Exception as e:
-        logger.warning(f"Classification failed: {e}")
-        branch, problem_type, is_math = "algebra", "solve", True
+        c = llm.classify(question)
+        branch = c.get("branch", "algebra")
+        problem_type = c.get("problem_type", "solve")
+        is_math = c.get("is_math", True)
+    except:
+        branch = "algebra"
+        problem_type = "solve"
+        is_math = True
 
-    # ── Step 2: Chat branch ───────────────────
+    # 2️⃣ chat
     if not is_math or branch == "chat":
+
         try:
-            chat_response = llm.chat(question, history)
+            answer = llm.chat(question, history)
+
             return {
-                "success":      True,
-                "branch":       "chat",
-                "problem_type": "conversation",
-                "final_answer": chat_response,
-                "is_chat":      True,
-                "llm_steps":    [],
+                "success": True,
+                "branch": "chat",
+                "final_answer": answer,
+                "is_chat": True,
+                "llm_steps": []
             }
-        except Exception as e:
-            return {"success": False, "error": str(e)}
 
-    # ── Step 3: Word problems → LLM directly ──
-    if branch == "word_problem":
-        try:
-            res = llm.word_problem(question)
-            steps = []
-            for s in res.get("steps", []):
-                steps.append({
-                    "step":        s.get("step", 1),
-                    "title":       s.get("description", ""),
-                    "action":      s.get("math", ""),
-                    "explanation": ""
-                })
+        except Exception as e:
             return {
-                "success":      True,
-                "branch":       "word_problem",
-                "problem_type": problem_type,
-                "final_answer": res.get("answer_sentence") or res.get("solution", ""),
-                "is_chat":      False,
-                "llm_steps":    steps,
+                "success": False,
+                "error": str(e)
             }
-        except Exception as e:
-            logger.error(f"Word problem error: {e}")
 
-    # ── Step 4: Parse ─────────────────────────
-    parser_map = {
-        "algebra":       "algebra",
-        "calculus":      "calculus",
-        "geometry":      "geometry",
-        "statistics":    "statistics",
-        "linear_algebra":"matrix",
-    }
-    parsed = {}
+    # 3️⃣ parse
     try:
-        parsed = llm.parse(question, parser_map.get(branch, "algebra"))
-        logger.info(f"📋 Parsed: {parsed}")
-    except Exception as e:
-        logger.warning(f"Parse failed: {e}")
+        parsed = llm.parse(question, branch)
+    except:
+        parsed = {}
 
-    # ── Step 5: Solve ─────────────────────────
-    result = {"success": False, "error": "No solver available"}
+    # 4️⃣ solve
+    result = {"success": False}
 
-    try:
-        if branch == "algebra":
-            expr = parsed.get("expression", question)
-            result = _run_solver(algebra_solve, expr)
-            if not result["success"]:
-                result = _run_solver(algebra_solve, question)
+    if branch == "algebra":
 
-        elif branch == "calculus":
-            expr = parsed.get("expression", question)
-            result = _run_solver(calculus_solve, expr)
-            if not result["success"]:
-                result = _run_solver(calculus_solve, question)
+        expr = parsed.get("expression", question)
+        result = run_solver(algebra_solve, expr)
 
-        elif branch == "geometry":
-            shape = parsed.get("shape", "")
-            find  = parsed.get("find", "area")
-            known = parsed.get("known", {})
-            result = _run_solver(geometry_solve, shape, find, **known)
+    elif branch == "calculus":
 
-        elif branch == "statistics":
-            data = parsed.get("data", [])
-            op   = parsed.get("operation", "mean")
-            result = _run_solver(statistics_solve, op, data=data)
+        expr = parsed.get("expression", question)
+        result = run_solver(calculus_solve, expr)
 
-        elif branch == "linear_algebra":
-            op       = parsed.get("operation", "determinant")
-            matrix_a = parsed.get("matrix_a")
-            result   = _run_solver(linear_algebra_solve, op, matrix=matrix_a)
+    elif branch == "geometry":
 
-    except Exception as e:
-        logger.error(f"Solver error: {e}")
-        result = {"success": False, "error": str(e)}
+        shape = parsed.get("shape")
+        find = parsed.get("find")
+        known = parsed.get("known", {})
+        result = run_solver(geometry_solve, shape, find, **known)
 
-    # ── Step 6: Fallback to LLM word_problem ──
-    if not result.get("success") and llm:
+    elif branch == "statistics":
+
+        data = parsed.get("data", [])
+        op = parsed.get("operation", "mean")
+        result = run_solver(statistics_solve, op, data=data)
+
+    elif branch == "linear_algebra":
+
+        op = parsed.get("operation", "determinant")
+        matrix = parsed.get("matrix_a")
+        result = run_solver(linear_algebra_solve, op, matrix=matrix)
+
+    # 5️⃣ fallback to LLM
+    if not result.get("success"):
+
         try:
-            res = llm.word_problem(question)
+            wp = llm.word_problem(question)
+
             result = {
-                "success":      True,
-                "final_answer": res.get("answer_sentence") or res.get("solution", ""),
+                "success": True,
+                "final_answer": wp.get("answer_sentence")
             }
+
         except:
             pass
 
-    # ── Step 7: Generate Steps ────────────────
-    if result.get("success") and llm:
-        answer = str(result.get("final_answer", result.get("answer", "")))
+    # 6️⃣ steps
+    if result.get("success"):
+
         try:
-            result["llm_steps"] = llm.steps(question, answer, branch)
+            steps = llm.steps(
+                question,
+                result.get("final_answer", ""),
+                branch
+            )
         except:
-            result["llm_steps"] = []
+            steps = []
 
-    # ── Step 8: Add metadata ──────────────────
-    result["branch"]       = branch
+        result["llm_steps"] = steps
+
+    result["branch"] = branch
     result["problem_type"] = problem_type
-    result["is_chat"]      = False
+    result["is_chat"] = False
 
-    # normalize answer key
-    if "answer" in result and "final_answer" not in result:
-        result["final_answer"] = result["answer"]
-
-    logger.info(f"✅ Done: success={result.get('success')}, branch={branch}")
     return result
 
-
 # ─────────────────────────────────────────────
-#  ENDPOINTS
+# ENDPOINTS
 # ─────────────────────────────────────────────
 
 @app.post("/solve")
-async def solve(request: QuestionRequest):
-    try:
-        return route_and_solve(request.question, request.history or [])
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+async def solve(req: QuestionRequest):
+    return route_and_solve(req.question, req.history)
 
 
 @app.post("/hints")
-async def get_hints(request: HintRequest):
+async def hints(req: HintRequest):
+
+    if llm is None:
+        return {"success": False}
+
     try:
-        if not llm:
-            return {"success": False, "error": "LLM not available"}
-        hints = llm.hints(request.question, request.problem_type, request.num_hints)
-        return {"success": True, "hints": hints}
+        hints = llm.hints(req.question, req.problem_type, req.num_hints)
+
+        return {
+            "success": True,
+            "hints": hints
+        }
+
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
-
-@app.post("/ocr")
-async def ocr_solve(file: UploadFile = File(...)):
-    try:
-        image_bytes = await file.read()
-        try:
-            from ocr_module import extract_math_from_image
-            extracted = extract_math_from_image(image_bytes)
-        except ImportError:
-            import google.generativeai as genai
-            import PIL.Image, io
-            img      = PIL.Image.open(io.BytesIO(image_bytes))
-            model    = genai.GenerativeModel("gemini-2.0-flash")
-            response = model.generate_content([
-                "Extract the math expression from this image. Return ONLY the math expression.",
-                img
-            ])
-            extracted = response.text.strip()
-
-        clean_expr = llm.ocr_fix(extracted) if llm else extracted
-        solution   = route_and_solve(clean_expr)
-        return {"success": True, "extracted": extracted, "cleaned": clean_expr, "solution": solution}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-
+# ─────────────────────────────────────────────
+# HEALTH
+# ─────────────────────────────────────────────
 
 @app.get("/health")
 async def health():
+
     return {
-        "status":  "ok",
-        "service": "Sphinx-SCA API",
-        "version": "3.0.0",
-        "llm":     llm is not None,
-        "solvers": {
-            "algebra":       algebra_solve       is not None,
-            "calculus":      calculus_solve       is not None,
-            "geometry":      geometry_solve       is not None,
-            "statistics":    statistics_solve     is not None,
-            "linear_algebra":linear_algebra_solve is not None,
-            "word_problems": word_solve           is not None,
-        }
+        "status": "ok",
+        "llm_loaded": llm is not None
     }
 
-
 # ─────────────────────────────────────────────
-#  RUN
+# RUN SERVER
 # ─────────────────────────────────────────────
 
 if __name__ == "__main__":
+
     uvicorn.run(
         "backend.app:app",
         host="0.0.0.0",
