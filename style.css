@@ -953,7 +953,7 @@ body.dark-theme .floating-search-wrapper {
 @media (max-width: 768px) {
     .floating-search-wrapper {
         left: 0;
-        padding: 0 12px 5px 12px;
+        padding: 0 12px 0 12px;
         /* Hugs the bottom tighter */
     }
 
@@ -963,7 +963,7 @@ body.dark-theme .floating-search-wrapper {
     }
 
     .main-content-wrapper {
-        padding-bottom: 75px;
+        padding-bottom: 60px;
         /* Removed the massive 120px dead space */
     }
 
@@ -1453,8 +1453,8 @@ body.dark-theme .floating-search-wrapper {
 @media (max-width: 768px) {
     .chat-interface {
         height: calc(100vh - 120px);
-        padding: 15px 12px;
-        /* Slight breathing room */
+        padding: 20px 12px 15px 12px;
+        /* Fixes top space */
     }
 
     .message {
@@ -1476,14 +1476,14 @@ body.dark-theme .floating-search-wrapper {
     }
 
     .message-avatar {
-        width: 30px;
+        width: 26px;
         /* Refined profile pic size in chat */
-        height: 30px;
+        height: 26px;
     }
 
     .message-avatar img {
-        width: 20px;
-        height: 20px;
+        width: 16px;
+        height: 16px;
     }
 
     .chat-input-wrapper {
