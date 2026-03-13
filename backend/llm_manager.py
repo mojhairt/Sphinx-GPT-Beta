@@ -19,12 +19,14 @@ sys.stdout.reconfigure(encoding='utf-8')
 import json
 import re
 from groq import Groq
+import os
+
 
 # ─────────────────────────────────────────────
 #  CONFIG
 # ─────────────────────────────────────────────
 
-GROQ_API_KEY = "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"   # ← from console.groq.com
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_MODEL = "moonshotai/kimi-k2-instruct"
 
 client = Groq(api_key=GROQ_API_KEY)
