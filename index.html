@@ -520,7 +520,11 @@
 
                 // 2. Connect to Backend
                 try {
-                    const API_URL = "http://localhost:8000";
+                    // Logic to use Local Backend on localhost, and Railway Backend on Vercel/Production
+                    const origin = window.location.origin;
+                    const API_URL = (origin.includes('localhost') || origin.includes('127.0.0.1')) 
+                        ? "http://localhost:8000" 
+                        : "https://sphinx-gpt-beta-production.up.railway.app";
 
                     // Disable button during request
                     const sendBtnIcon = sendBtn.querySelector('.send-icon');
