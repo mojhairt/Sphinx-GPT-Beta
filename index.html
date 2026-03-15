@@ -72,6 +72,10 @@
                     <span class="material-symbols-outlined">dashboard</span>
                     <span class="item-text">Dashboard</span>
                 </a>
+                <a href="about.html" class="sidebar-nav-item">
+                    <span class="material-symbols-outlined">info</span>
+                    <span class="item-text">About Us</span>
+                </a>
                 <a href="#" class="sidebar-nav-item">
                     <span class="material-symbols-outlined">settings</span>
                     <span class="item-text">Settings</span>
@@ -164,9 +168,35 @@
                                 <span class="material-symbols-outlined">image</span>
                             </button>
                         </div>
-                        <button class="send-btn" id="main-send-btn" title="Send Request">
-                            <span class="material-symbols-outlined send-icon">arrow_upward</span>
-                        </button>
+
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <!-- Mode Dropdown -->
+                            <div class="mode-dropdown" id="mode-dropdown">
+                                <button class="mode-dropdown-btn" id="mode-dropdown-btn">
+                                    <span class="material-symbols-outlined dropdown-icon">auto_awesome</span>
+                                    <span class="dropdown-text">General</span>
+                                    <span class="material-symbols-outlined">expand_more</span>
+                                </button>
+                                <div class="mode-dropdown-menu" id="mode-dropdown-menu">
+                                    <div class="mode-option active" data-mode="general">
+                                        <span class="material-symbols-outlined">auto_awesome</span>
+                                        <span>General</span>
+                                    </div>
+                                    <div class="mode-option" data-mode="think">
+                                        <span class="material-symbols-outlined">psychology</span>
+                                        <span>Deep Think</span>
+                                    </div>
+                                    <div class="mode-option" data-mode="steps">
+                                        <span class="material-symbols-outlined">format_list_numbered</span>
+                                        <span>Steps</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button class="send-btn" id="main-send-btn" title="Send Request">
+                                <span class="material-symbols-outlined send-icon">arrow_upward</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="chat-disclaimer">Sphinx-SCA BETA can make mistakes. Always verify important calculations.
@@ -301,6 +331,43 @@
             }
 
             const { data: { session } } = await supabase.auth.getSession();
+            let currentMode = 'general';
+
+            // Handle Mode Dropdown
+            const modeDropdownBtn = document.getElementById('mode-dropdown-btn');
+            const modeDropdownMenu = document.getElementById('mode-dropdown-menu');
+            const modeOptions = document.querySelectorAll('.mode-option');
+
+            if (modeDropdownBtn && modeDropdownMenu) {
+                modeDropdownBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    modeDropdownMenu.classList.toggle('active');
+                });
+
+                document.addEventListener('click', () => {
+                    modeDropdownMenu.classList.remove('active');
+                });
+
+                modeOptions.forEach(option => {
+                    option.addEventListener('click', () => {
+                        const mode = option.dataset.mode;
+                        const text = option.querySelector('span:last-child').textContent;
+                        const icon = option.querySelector('.material-symbols-outlined').textContent;
+
+                        currentMode = mode;
+
+                        // Update button text and icon
+                        modeDropdownBtn.querySelector('.dropdown-text').textContent = text;
+                        modeDropdownBtn.querySelector('.dropdown-icon').textContent = icon;
+
+                        // Update active state
+                        modeOptions.forEach(o => o.classList.remove('active'));
+                        option.classList.add('active');
+
+                        modeDropdownMenu.classList.remove('active');
+                    });
+                });
+            }
 
             let currentUserId = null;
             let currentSessionId = generateUUID(); // Start a new session by default
@@ -491,16 +558,19 @@
                 }
 
                 chatMessages.appendChild(msgDiv);
+                
                 // Auto-scroll the chat
                 const scrollWrapper = document.getElementById('chat-interface');
                 scrollWrapper.scrollTop = scrollWrapper.scrollHeight;
+
+                return msgDiv; // Return the created element
             }
 
             async function handleSend() {
                 const msg = searchInput.value;
                 if (!msg.trim()) return;
 
-                // 1. Show message in UI
+                // 1. Show user message in UI
                 if (!isChatActive) {
                     isChatActive = true;
                     heroSection.classList.add('animate-out');
@@ -508,78 +578,109 @@
                         heroSection.style.display = 'none';
                         chatInterface.style.display = 'flex';
                         addMessage(msg, 'user');
-                        await saveMessageToSupabase(msg, 'user'); // Save user message
+                        await saveMessageToSupabase(msg, 'user');
                     }, 400);
                 } else {
                     addMessage(msg, 'user');
-                    await saveMessageToSupabase(msg, 'user'); // Save user message
+                    await saveMessageToSupabase(msg, 'user');
                 }
 
                 searchInput.value = '';
                 autoResize(searchInput);
 
-                // 2. Connect to Backend
+                // 2. Connect to Backend (Streaming)
                 try {
-                    // Logic to use Local Backend on localhost, and Railway Backend on Vercel/Production
                     const origin = window.location.origin;
-                    const API_URL = (origin.includes('localhost') || origin.includes('127.0.0.1')) 
-                        ? "http://localhost:8000" 
+                    const API_URL = (origin.includes('localhost') || origin.includes('127.0.0.1'))
+                        ? "http://localhost:8000"
                         : "https://sphinx-gpt-beta-production.up.railway.app";
 
-                    // Disable button during request
                     const sendBtnIcon = sendBtn.querySelector('.send-icon');
                     sendBtn.disabled = true;
-                    sendBtnIcon.textContent = 'pending'; // visually indicate loading
+                    sendBtnIcon.textContent = 'pending';
 
-                    // Build history array from current loaded messages
+                    // Build history
                     const historyForBackend = [];
                     const messageElements = chatMessages.querySelectorAll('.message');
-                    // Add all messages EXCEPT the very last one we just added (the current question)
                     for (let i = 0; i < messageElements.length - 1; i++) {
                         const el = messageElements[i];
                         const isUser = el.classList.contains('user-message');
-                        const text = el.querySelector('p').textContent;
-                        historyForBackend.push({
-                            role: isUser ? "user" : "assistant",
-                            content: text
-                        });
+                        const p = el.querySelector('p');
+                        if (p) {
+                            historyForBackend.push({
+                                role: isUser ? "user" : "assistant",
+                                content: p.textContent
+                            });
+                        }
                     }
 
-                    const response = await fetch(`${API_URL}/solve`, {
+                    // Create AI message placeholder
+                    const aiMsgDiv = addMessage("", 'ai');
+                    const aiTextP = aiMsgDiv.querySelector('.message-content p');
+                    let fullAiResponse = "";
+
+                    const response = await fetch(`${API_URL}/solve_stream`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             question: msg,
                             user_id: currentUserId,
-                            history: historyForBackend
+                            history: historyForBackend,
+                            mode: currentMode
                         })
                     });
+
+                    if (!response.ok) throw new Error(`Server Error: ${response.status}`);
+
+                    // Read the stream
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+
+                    while (true) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
+
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
+
+                        for (let line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const dataStr = line.replace('data: ', '').trim();
+                                if (dataStr === '[DONE]') break;
+                                
+                                try {
+                                    const data = JSON.parse(dataStr);
+                                    if (data.content) {
+                                        fullAiResponse += data.content;
+                                        aiTextP.textContent = fullAiResponse;
+                                        
+                                        // Auto-scroll while streaming
+                                        const scrollWrapper = document.getElementById('chat-interface');
+                                        scrollWrapper.scrollTop = scrollWrapper.scrollHeight;
+                                    }
+                                } catch (e) {
+                                    console.warn("Error parsing stream chunk", e);
+                                }
+                            }
+                        }
+                    }
 
                     // Re-enable button
                     sendBtn.disabled = false;
                     sendBtnIcon.textContent = 'arrow_upward';
 
-                    if (!response.ok) {
-                        throw new Error(`Server Error (${response.status}): ${response.statusText}`);
+                    // Save final response and update dashboard
+                    if (fullAiResponse) {
+                        await saveMessageToSupabase(fullAiResponse, 'ai');
+                        if (currentUserId) fetchUserData(currentUserId);
                     }
 
-                    const result = await response.json();
-                    if (result.success) {
-                        const aiResponse = result.final_answer || result.answer || "No response content.";
-                        addMessage(aiResponse, 'ai');
-                        await saveMessageToSupabase(aiResponse, 'ai');
-                        if (currentUserId) fetchUserData(currentUserId);
-                    } else {
-                        addMessage(`⚠️ App Error: ${result.error || "Unknown issue"}`, 'ai');
-                    }
                 } catch (error) {
-                    console.error("Fetch error details:", error);
-                    // Reset button on error
+                    console.error("Streaming error:", error);
                     sendBtn.disabled = false;
                     const sendBtnIcon = sendBtn.querySelector('.send-icon');
                     sendBtnIcon.textContent = 'arrow_upward';
-
-                    addMessage(`❌ Connection Failed: ${error.message}. Please check if the backend is awake.`, 'ai');
+                    addMessage(`❌ Connection Failed: ${error.message}`, 'ai');
                 }
             }
             // Event Listeners for Unified Search
