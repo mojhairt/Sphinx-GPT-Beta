@@ -4,14 +4,17 @@
 :root {
     --bg-orange: #E0702E;
     --bg-light: #E6E3DA;
-    --text-main: #FFFFFF;
+    --text-main: #111827;
     --text-white: #FFFFFF;
-    --text-gray: #D1D5DB;
+    --text-gray: #4B5563;
     --ai-name: #FFFFFF;
     --ai-text: #FFFFFF;
-    --user-msg-bg: rgba(0, 0, 0, 0.6);
+    --user-msg-bg: rgba(0, 0, 0, 0.7);
     --user-msg-text: #FFFFFF;
-    --dropdown-bg: rgba(255, 255, 255, 0.95);
+    --dropdown-bg: rgba(255, 255, 255, 0.98);
+    --ui-btn-bg: #FFFFFF;
+    --ui-btn-border: #E5E7EB;
+    --ui-element-color: #374151;
     --hover-dark: #D4CDBC;
 }
 
@@ -24,6 +27,9 @@ body.dark-theme {
     --user-msg-bg: rgba(255, 255, 255, 0.1);
     --user-msg-text: #FFFFFF;
     --dropdown-bg: rgba(15, 23, 42, 0.98);
+    --ui-btn-bg: rgba(255, 255, 255, 0.06);
+    --ui-btn-border: rgba(255, 255, 255, 0.1);
+    --ui-element-color: #E2E8F0;
 }
 
 * {
@@ -470,9 +476,9 @@ body.app-page {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: transparent;
-    color: var(--text-gray);
-    border: 1px solid #E5E7EB;
+    background: var(--ui-btn-bg);
+    color: var(--ui-element-color);
+    border: 1px solid var(--ui-btn-border);
     cursor: pointer;
     transition: all 0.2s ease;
     margin-right: 15px;
@@ -484,8 +490,9 @@ body.app-page {
 }
 
 body.dark-theme .nav-theme-toggle {
-    border-color: #374151;
-    color: #9CA3AF;
+    border-color: var(--ui-btn-border);
+    background: var(--ui-btn-bg);
+    color: var(--ui-element-color);
 }
 
 body.dark-theme .nav-theme-toggle:hover {
@@ -1433,6 +1440,7 @@ body.dark-theme .floating-search-wrapper {
     letter-spacing: 0.8px;
     color: var(--ai-name);
     margin-bottom: 6px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
 /* Specific styling for the AI label response (bolding) */
@@ -2062,16 +2070,26 @@ body.light-theme .stat-label {
 .mode-dropdown-btn {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    color: var(--text-gray);
+    gap: 6px;
+    padding: 7px 12px;
+    background: var(--ui-btn-bg);
+    border: 1px solid var(--ui-btn-border);
+    border-radius: 10px;
+    color: var(--ui-element-color);
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mode-dropdown-btn .dropdown-icon {
+    color: var(--bg-orange);
+    font-variation-settings: 'FILL' 1;
+}
+
+.mode-dropdown-btn .material-symbols-outlined:last-child {
+    font-size: 16px;
+    opacity: 0.7;
 }
 
 .mode-dropdown-btn:hover {
