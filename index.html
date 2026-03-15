@@ -551,7 +551,7 @@
                 } else {
                     msgDiv.innerHTML = `
                         <div class="message-content">
-                            <p>${text}</p>
+                            <div class="text-body">${text}</div>
                         </div>
                         <div class="message-avatar">
                             <img src="user.png" alt="${userName}">
@@ -595,7 +595,7 @@
                     const origin = window.location.origin;
                     const API_URL = (origin.includes('localhost') || origin.includes('127.0.0.1'))
                         ? "http://localhost:8000"
-                        : "https://sphinx-gpt-beta-production.up.railway.app";
+                        : ""; // Use relative paths for production
 
                     const sendBtnIcon = sendBtn.querySelector('.send-icon');
                     sendBtn.disabled = true;
