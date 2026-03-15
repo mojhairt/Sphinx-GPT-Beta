@@ -534,6 +534,22 @@
             }
             searchInput.addEventListener('input', () => autoResize(searchInput));
 
+            // --- Professional Markdown-lite Formatter ---
+            function formatMessage(text) {
+                if (!text) return "";
+                // Basic bold
+                text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                // Basic italic
+                text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+                // Inline code
+                text = text.replace(/`(.*?)`/g, '<code class="inline-code">$1</code>');
+                // Block code (simplified)
+                text = text.replace(/```([\s\S]*?)```/g, '<pre class="code-block"><code>$1</code></pre>');
+                // Line breaks
+                text = text.replace(/\n/g, '<br>');
+                return text;
+            }
+
             // Function to add a message bubble
             function addMessage(text, sender, userName = 'User', isError = false) {
                 const msgDiv = document.createElement('div');
@@ -599,21 +615,6 @@
                 searchInput.value = '';
                 autoResize(searchInput);
 
-                // --- Professional Markdown-lite Formatter ---
-                function formatMessage(text) {
-                    if (!text) return "";
-                    // Basic bold
-                    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                    // Basic italic
-                    text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
-                    // Inline code
-                    text = text.replace(/`(.*?)`/g, '<code class="inline-code">$1</code>');
-                    // Block code (simplified)
-                    text = text.replace(/```([\s\S]*?)```/g, '<pre class="code-block"><code>$1</code></pre>');
-                    // Line breaks
-                    text = text.replace(/\n/g, '<br>');
-                    return text;
-                }
 
                 // 2. Connect to Backend (Smart Fallback)
                 try {
