@@ -72,10 +72,12 @@
                     <span class="material-symbols-outlined">dashboard</span>
                     <span class="item-text">Dashboard</span>
                 </a>
+                <!-- Temporarily hidden per user request
                 <a href="about.html" class="sidebar-nav-item">
                     <span class="material-symbols-outlined">info</span>
                     <span class="item-text">About Us</span>
                 </a>
+                -->
                 <a href="#" class="sidebar-nav-item">
                     <span class="material-symbols-outlined">settings</span>
                     <span class="item-text">Settings</span>
@@ -581,19 +583,17 @@
                 const msg = searchInput.value;
                 if (!msg.trim()) return;
 
-                // 1. Show user message in UI
+                // 1. Add User Message immediately to ensure correct chronology
+                addMessage(msg, 'user');
+                await saveMessageToSupabase(msg, 'user');
+
                 if (!isChatActive) {
                     isChatActive = true;
                     heroSection.classList.add('animate-out');
-                    setTimeout(async () => {
-                        heroSection.style.display = 'none';
-                        chatInterface.style.display = 'flex';
-                        addMessage(msg, 'user');
-                        await saveMessageToSupabase(msg, 'user');
-                    }, 400);
-                } else {
-                    addMessage(msg, 'user');
-                    await saveMessageToSupabase(msg, 'user');
+                    // Small delay for animation before layout switch
+                    await new Promise(resolve => setTimeout(resolve, 400));
+                    heroSection.style.display = 'none';
+                    chatInterface.style.display = 'flex';
                 }
 
                 searchInput.value = '';
