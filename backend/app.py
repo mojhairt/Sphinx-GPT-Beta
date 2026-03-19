@@ -247,12 +247,21 @@ async def supabase_client():
 
 # ─────────────────────────────────────────────
 # OCR ENDPOINT
-import easyocr
-from pix2tex.cli import LatexOCR
 import re as re_module
 
-ocr_reader = easyocr.Reader(['en'])
-pix_model = LatexOCR()
+try:
+    import easyocr
+    ocr_reader = easyocr.Reader(['en'])
+except Exception as e:
+    print(f"⚠️ easyocr not available: {e}")
+    ocr_reader = None
+
+try:
+    from pix2tex.cli import LatexOCR
+    pix_model = LatexOCR()
+except Exception as e:
+    print(f"⚠️ pix2tex not available: {e}")
+    pix_model = None
 
 def clean_math(text):
     text = text.replace('÷','/')
