@@ -1098,29 +1098,44 @@ body.app-page {
    MATH MODE & TOOLS BUTTONS
    ============================================================ */
 
-.math-mode-btn,
-.tools-dropdown-btn {
+.tool-pill-btn, .math-mode-btn {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-2);
-    padding: 6px var(--space-3);
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border-color);
-    background: var(--surface-hover);
+    gap: 6px;
+    padding: 6px 16px;
+    border-radius: var(--radius-full);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
     color: var(--text-secondary);
-    font-size: var(--font-xs);
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 500;
     cursor: pointer;
     transition: all var(--transition-fast);
-    font-family: var(--font-family);
-    line-height: 1.2;
 }
 
-.math-mode-btn:hover,
-.tools-dropdown-btn:hover {
-    border-color: var(--border-hover);
+.tool-pill-btn:hover, .math-mode-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
     color: var(--text-primary);
-    background: var(--surface-active);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.icon-button {
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.icon-button:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-primary);
 }
 
 #hero-calc-toggle,
@@ -1389,20 +1404,27 @@ body.app-page {
     opacity: 0.8;
 }
 
-/* Re-ensure general dropdown works on right */
 .mode-dropdown-btn {
-    height: 36px;
-    padding: 0 12px;
-    border-radius: 8px;
+    height: 34px;
+    padding: 0 16px;
+    border-radius: var(--radius-full);
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 14px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
 }
 
+.mode-dropdown-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: var(--text-primary);
+}
 .search-input {
     width: 100%;
     background: transparent;
@@ -3112,5 +3134,43 @@ body.dashboard-page {
 
     .tools-dropdown {
         min-width: 180px;
+    }
+}
+/* --- Mobile Search Toolbar Optimization --- */
+@media (max-width: 768px) {
+    .input-content {
+        padding: 8px 12px;
+    }
+
+    .math-mode-btn span:not(.material-symbols-outlined),
+    .tool-pill-btn span:not(.material-symbols-outlined),
+    .mode-dropdown-btn .dropdown-text {
+        display: none;
+    }
+    
+    .math-mode-btn, .tool-pill-btn, .mode-dropdown-btn {
+        padding: 0;
+        width: 38px;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-full);
+    }
+    
+    .mode-dropdown-btn {
+        gap: 0;
+    }
+
+    .search-tools {
+        gap: 6px;
+    }
+
+    .search-footer {
+        gap: 8px;
+    }
+
+    .search-input {
+        font-size: 16px; /* Avoid iOS auto-zoom */
     }
 }
