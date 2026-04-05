@@ -641,22 +641,26 @@
                 });
             }
 
-            async function saveMessageToSupabase(content, sender) {
+            async function saveMessageToSupabase(content, sender, imageUrl = null) {
                 if (!currentUserId) {
                     console.warn('User is not logged in. Message not saved.');
                     return;
                 }
 
+                const payload = {
+                    user_id: currentUserId,
+                    session_id: currentSessionId,
+                    content: content,
+                    sender: sender
+                };
+
+                if (imageUrl) {
+                    payload.image_url = imageUrl;
+                }
+
                 const { data, error } = await supabase
                     .from('messages')
-                    .insert([
-                        {
-                            user_id: currentUserId,
-                            session_id: currentSessionId,
-                            content: content,
-                            sender: sender
-                        }
-                    ]);
+                    .insert([payload]);
 
                 if (error) {
                     console.error('Error saving message:', error);
@@ -695,7 +699,7 @@
                         if (avatarImg) userName = avatarImg.alt;
 
                         messages.forEach(msg => {
-                            addMessage(msg.content, msg.sender);
+                            addMessage(msg.content, msg.sender, msg.image_url);
                         });
                     }
 
@@ -825,7 +829,7 @@
                     msgDiv.innerHTML = `
                         <div class="message-content">
                             ${imageUrl ? `<img src="${imageUrl}" class="message-image" onclick="window.open('${imageUrl}', '_blank')">` : ''}
-                            ${text ? `<div class="text-body">${text}</div>` : ''}
+                            ${(text && text !== "📷 Image Message") ? `<div class="text-body">${text}</div>` : ''}
                         </div>
                         <div class="message-avatar">
                             <img src="user.png" alt="${userName}">
@@ -948,7 +952,7 @@
                 // Add User Message
                 addMessage(msg, 'user', attachedImageUrl);
                 try {
-                    await saveMessageToSupabase(msg || "📷 Image Message", 'user');
+                    await saveMessageToSupabase(msg || "", 'user', attachedImageUrl);
                 } catch (e) {
                     console.warn("Could not save to Supabase history:", e);
                 }
