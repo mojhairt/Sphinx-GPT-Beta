@@ -939,6 +939,12 @@
                 const activeSendBtn = window.isChatActive ? (document.getElementById('chat-send-btn') || sendBtn) : sendBtn;
                 const chatSendBtn = document.getElementById('chat-send-btn');
                 const sendBtnIcon = activeSendBtn.querySelector('.send-icon');
+                
+                // Get backend URL
+                let API_URL = ""; 
+                if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                     API_URL = "https://sphinx-gpt-beta-production.up.railway.app";
+                }
 
                 window.isStreaming = true;
                 sendBtn.disabled = true;
@@ -952,7 +958,7 @@
                         formData.append('file', selectedImageFile);
                         if (currentUserId) formData.append('user_id', currentUserId);
 
-                        const OCR_URL = "/ocr";
+                        const OCR_URL = `${API_URL}/ocr`;
 
                         const ocrResponse = await fetch(OCR_URL, {
                             method: 'POST',
@@ -987,8 +993,6 @@
 
                 // Connect to Backend for Solving
                 try {
-                    let API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? "http://localhost:8000" : "https://sphinx-gpt-beta-production.up.railway.app";
-
                     const historyForBackend = [];
                     const messageElements = chatMessages.querySelectorAll('.message');
                     const recentMsgs = Array.from(messageElements).slice(-10);
