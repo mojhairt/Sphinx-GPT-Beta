@@ -36,7 +36,7 @@ GROQ_MODEL = "llama-3.3-70b-versatile"
 client = None
 if GROQ_API_KEY:
     try:
-        client = Groq(api_key=GROQ_API_KEY)
+        client = Groq(api_key=GROQ_API_KEY, timeout=60.0)
     except Exception as e:
         print(f"⚠️ Failed to initialize Groq client: {e}")
 else:
@@ -83,7 +83,7 @@ def _call_llm(prompt: str, temperature: float = 0.0) -> str:
             model=GROQ_MODEL,
             messages=[{"role": "user", "content": prompt}],
             temperature=temperature,
-            max_tokens=1024,
+            max_tokens=4096,
         )
         text = response.choices[0].message.content
         text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
@@ -102,7 +102,7 @@ def _call_chat(messages: list, temperature: float = 0.7) -> str:
             model=GROQ_MODEL,
             messages=full_messages,
             temperature=temperature,
-            max_tokens=2048,
+            max_tokens=4096,
         )
         text = response.choices[0].message.content
         text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
@@ -121,7 +121,7 @@ def stream_chat(messages: list, temperature: float = 0.7):
             model=GROQ_MODEL,
             messages=full_messages,
             temperature=temperature,
-            max_tokens=2048,
+            max_tokens=4096,
             stream=True,
         )
         

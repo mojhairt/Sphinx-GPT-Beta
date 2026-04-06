@@ -4,6 +4,26 @@ import Lanyard from './components/Lanyard/Lanyard';
 import ProfileCard from './components/ProfileCard/ProfileCard';
 import ShinyText from './components/ShinyText/ShinyText';
 
+class TeamErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ color: '#E0702E', textAlign: 'center', padding: '100px', fontSize: '1.2rem', fontFamily: 'monospace' }}>
+          ⚠️ Partially failed to load 3D team assets over the network. Please refresh.
+        </div>
+      );
+    }
+    return this.props.children; 
+  }
+}
+
 const mohamedData = {
   id: 1,
   name: "Mohamed Khairy",
@@ -46,7 +66,8 @@ const fourthMemberData = {
 
 const TeamRevamp = () => {
   return (
-    <Suspense fallback={<div style={{ color: 'white', textAlign: 'center', padding: '100px' }}>Loading Team...</div>}>
+    <TeamErrorBoundary>
+      <Suspense fallback={<div style={{ color: 'white', textAlign: 'center', padding: '100px' }}>Loading Team 3D Assets...</div>}>
       <div className="single-profile-container">
         {/* First Profile */}
         <div className="single-profile-row">
@@ -248,6 +269,7 @@ const TeamRevamp = () => {
 
       </div>
     </Suspense>
+    </TeamErrorBoundary>
   );
 };
 

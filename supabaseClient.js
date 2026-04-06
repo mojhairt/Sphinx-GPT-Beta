@@ -10,17 +10,11 @@ if (typeof import.meta !== 'undefined' && import.meta.env) {
     supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 }
 
-// Fallback to hardcoded keys for public anon access if environment variables are missing
-// (Ensures the app works when served as a static file by FastAPI)
-if (!supabaseUrl) {
-    supabaseUrl = 'https://twkbvvinlzdvtqkauvkv.supabase.co';
-}
-if (!supabaseAnonKey) {
-    supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3a2J2dmlubHpkdnRxa2F1dmt2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NTI0ODksImV4cCI6MjA4ODAyODQ4OX0.PVUSz03RkXKlMky_qf_U5pAvLU7_CBhB1PaRgTWJ4Zk';
-}
-
 if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('Supabase configuration missing!');
+    console.warn('Supabase configuration missing! Waiting for proper environment variables...');
+    // Provide safe defaults to prevent crashing, but DO NOT use production secrets here!
+    supabaseUrl = supabaseUrl || 'https://example-placeholder.supabase.co';
+    supabaseAnonKey = supabaseAnonKey || 'placeholder-key';
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)

@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 # Load .env file at the very beginning
 load_dotenv()
-from fastapi import FastAPI, UploadFile, File, Request
+from fastapi import FastAPI, UploadFile, File, Request, Response
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
@@ -53,12 +53,16 @@ except ImportError:
     except ImportError:
         LLMManager = None
 
-try:
-    llm = LLMManager()
-    print("✅ LLM Manager loaded")
-except Exception as e:
+if LLMManager:
+    try:
+        llm = LLMManager()
+        print("✅ LLM Manager loaded")
+    except Exception as e:
+        llm = None
+        print("⚠️ LLM Manager failed:", e)
+else:
     llm = None
-    print("⚠️ LLM Manager failed:", e)
+    print("⚠️ LLM Manager class could not be imported")
 
 # ─────────────────────────────────────────────
 # LOGGING
@@ -117,16 +121,46 @@ print(f"📦 Engines Loaded: Algebra={algebra_solve is not None}, Calculus={calc
 # ─────────────────────────────────────────────
 
 # ✅ FIX: Restrict CORS to known origins instead of wildcard
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "https://sphinx-gpt-beta-production.up.railway.app").split(",")
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "https://sphinx-gpt-beta-production.up.railway.app").split(",")
+ALLOWED_ORIGINS = [o.strip() for o in _raw_origins if o.strip()]
+
+# Auto-add local dev origins if not present
+LOCAL_DEFAULTS = ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://127.0.0.1:5174", "http://localhost:8000", "http://127.0.0.1:8000"]
+for origin in LOCAL_DEFAULTS:
+    if origin not in ALLOWED_ORIGINS:
+        ALLOWED_ORIGINS.append(origin)
 
 app = FastAPI(
     title="Sphinx-SCA API",
     version="3.0"
 )
 
+# Simple In-Memory Rate Limiter (Token Bucket per IP)
+import time
+from fastapi import HTTPException
+from collections import defaultdict
+
+RATE_LIMIT_REQUESTS = 60
+RATE_LIMIT_WINDOW_SECONDS = 60
+ip_requests = defaultdict(list)
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    client_ip = request.client.host
+    now = time.time()
+    
+    # Clean up old requests
+    ip_requests[client_ip] = [req_time for req_time in ip_requests[client_ip] if now - req_time < RATE_LIMIT_WINDOW_SECONDS]
+    
+    if len(ip_requests[client_ip]) >= RATE_LIMIT_REQUESTS:
+        return JSONResponse(status_code=429, content={"detail": "Too Many Requests"})
+        
+    ip_requests[client_ip].append(now)
+    return await call_next(request)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Allow all origins for local testing/file:// protocol
+    allow_origins=ALLOWED_ORIGINS, # Restrict to allowed domains in production
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -270,17 +304,18 @@ def route_and_solve(question: str, history: list = None, mode: str = "general"):
 
     # 5️⃣ fallback to LLM
     if not result.get("success"):
-
-        try:
-            wp = llm.word_problem(question)
-
-            result = {
-                "success": True,
-                "final_answer": wp.get("answer_sentence")
-            }
-
-        except Exception as e:
-            logger.error("Word problem fallback failed: %s", e, exc_info=True)
+        if branch == "word_problem":
+            try:
+                wp = llm.word_problem(question)
+                result = {
+                    "success": True,
+                    "final_answer": wp.get("answer_sentence")
+                }
+            except Exception as e:
+                logger.error("Word problem fallback failed: %s", e, exc_info=True)
+                result["error"] = str(e)
+        else:
+            result = {"success": False, "error": "Math engine failed to solve the problem."}
 
     # 6️⃣ steps
     if result.get("success"):
@@ -345,14 +380,17 @@ async def solve_stream(req: QuestionRequest):
         
     messages.append({"role": "user", "content": prompt})
 
-    def chunk_generator():
+    async def chunk_generator():
         try:
             for chunk in llm.stream_chat(messages):
                 yield f"data: {json.dumps({'content': chunk})}\n\n"
+        except asyncio.CancelledError:
+            logger.info("Client disconnected during stream")
         except Exception as e:
             logger.error("Streaming error: %s", e, exc_info=True)
             yield f"data: {json.dumps({'error': 'Stream interrupted'})}\n\n"
-        yield "data: [DONE]\n\n"
+        finally:
+            yield "data: [DONE]\n\n"
 
     return StreamingResponse(chunk_generator(), media_type="text/event-stream")
 
@@ -383,10 +421,14 @@ async def hints(req: HintRequest):
 # ─────────────────────────────────────────────
 
 @app.get("/health")
-async def health():
+async def health(response: Response):
+
+    is_healthy = llm is not None and (algebra_solve is not None)
+    if not is_healthy:
+        response.status_code = 503
 
     return {
-        "status": "ok",
+        "status": "ok" if is_healthy else "degraded",
         "llm_loaded": llm is not None,
         "engines": {
             "algebra": algebra_solve is not None,
@@ -403,45 +445,30 @@ async def health():
 
 FRONTEND_DIR = PROJECT_ROOT
 
+ALLOWED_FILES = [
+    "index.html", 
+    "dashboard.html", 
+    "login.html", 
+    "signup.html", 
+    "about.html", 
+    "style.css", 
+    "logo.png", 
+    "user.png", 
+    "bg.jpg", 
+    "supabaseClient.js"
+]
+
 @app.get("/")
 async def home():
     return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
 
-@app.get("/index.html")
-async def index():
-    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
-
-@app.get("/dashboard.html")
-async def dashboard():
-    return FileResponse(os.path.join(FRONTEND_DIR, "dashboard.html"))
-
-@app.get("/login.html")
-async def login():
-    return FileResponse(os.path.join(FRONTEND_DIR, "login.html"))
-
-@app.get("/signup.html")
-async def signup():
-    return FileResponse(os.path.join(FRONTEND_DIR, "signup.html"))
-
-@app.get("/style.css")
-async def style():
-    return FileResponse(os.path.join(FRONTEND_DIR, "style.css"))
-
-@app.get("/logo.png")
-async def logo():
-    return FileResponse(os.path.join(FRONTEND_DIR, "logo.png"))
-
-@app.get("/user.png")
-async def user_img():
-    return FileResponse(os.path.join(FRONTEND_DIR, "user.png"))
-
-@app.get("/bg.jpg")
-async def bg():
-    return FileResponse(os.path.join(FRONTEND_DIR, "bg.jpg"))
-
-@app.get("/supabaseClient.js")
-async def supabase_client():
-    return FileResponse(os.path.join(FRONTEND_DIR, "supabaseClient.js"))
+@app.get("/{filename}")
+async def serve_static(filename: str):
+    if filename in ALLOWED_FILES:
+        return FileResponse(os.path.join(FRONTEND_DIR, filename))
+    # For subdirectories like src/ or public/assets/ if requested dynamically, 
+    # though usually they are built into dist. We return 404 for unauthorized root files.
+    return JSONResponse({"error": "File not found"}, status_code=404)
 
 # ─────────────────────────────────────────────
 # RUN SERVER

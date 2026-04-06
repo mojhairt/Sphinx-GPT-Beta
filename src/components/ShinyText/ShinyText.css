@@ -2,15 +2,15 @@
   color: transparent;
   background: linear-gradient(
     120deg,
-    rgba(224, 112, 46, 0) 40%,
-    rgba(224, 112, 46, 0.9) 50%,
-    rgba(224, 112, 46, 0) 60%
+    #E0702E 40%,
+    #FFFFFF 50%,
+    #E0702E 60%
   );
-  background-size: 200% 100%;
+  background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
   display: inline-block;
-  animation: shiny 5s linear infinite;
+  animation: shiny 3s linear infinite;
 }
 
 .shiny-text.disabled {

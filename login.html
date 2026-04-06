@@ -118,6 +118,19 @@
             font-size: var(--font-body);
             outline: none;
             transition: all var(--transition-fast);
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        .dark-theme .login-input {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            color-scheme: dark;
+        }
+
+        .dark-theme .login-input:-webkit-autofill {
+            -webkit-box-shadow: 0 0 0 1000px var(--bg-primary) inset !important;
+            -webkit-text-fill-color: var(--text-primary) !important;
         }
 
         .login-input:focus {

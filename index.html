@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sphinx-SCA — AI Math Solver & Assistant</title>
+    <title>Sphinx-SCA </title>
     <meta name="description"
         content="Sphinx-SCA is a premium AI-powered math solver and assistant. Get instant solutions, step-by-step explanations, and smart tutoring.">
     <link rel="icon" type="image/png" href="/logo.png">
@@ -31,8 +31,7 @@
 
     <link rel="stylesheet" href="style.css">
 
-    <!-- GeoGebra Graphing Applet -->
-    <script src="https://www.geogebra.org/apps/deployggb.js"></script>
+    <!-- GeoGebra Graphing Applet (Lazy Loaded) -->
 </head>
 
 <body class="app-page">
@@ -180,13 +179,17 @@
                                             <span class="material-symbols-outlined">calculate</span>
                                         </button>
                                         <button class="tool-pill-btn" id="math-keyboard-toggle" title="Symbols">
-                                            <span class="material-symbols-outlined" style="font-size: 18px;">functions</span>
+                                            <span class="material-symbols-outlined dropdown-icon"
+                                                style="font-size: 18px;">functions</span>
                                             <span>Symbols</span>
                                         </button>
-                                        <button class="tool-pill-btn" id="hero-tool-create-graph" onclick="toggleGraphBar()" title="Tools">
-                                            <span class="material-symbols-outlined" style="font-size: 18px;">grid_view</span>
+                                        <button class="tool-pill-btn" id="hero-tool-create-graph"
+                                            onclick="toggleGraphBar()" title="Tools">
+                                            <span class="material-symbols-outlined dropdown-icon"
+                                                style="font-size: 18px;">grid_view</span>
                                             <span>Tools</span>
-                                            <span class="material-symbols-outlined" style="font-size: 14px; margin-left: 2px;">expand_more</span>
+                                            <span class="material-symbols-outlined"
+                                                style="font-size: 14px; margin-left: 2px;">expand_more</span>
                                         </button>
                                     </div>
 
@@ -194,9 +197,11 @@
                                         <!-- Mode Dropdown restored here -->
                                         <div class="mode-dropdown" id="mode-dropdown">
                                             <button class="mode-dropdown-btn" id="mode-dropdown-btn">
-                                                <span class="material-symbols-outlined dropdown-icon">auto_awesome</span>
+                                                <span
+                                                    class="material-symbols-outlined dropdown-icon">auto_awesome</span>
                                                 <span class="dropdown-text">General</span>
-                                                <span class="material-symbols-outlined" style="font-size: 14px;">expand_more</span>
+                                                <span class="material-symbols-outlined"
+                                                    style="font-size: 14px;">expand_more</span>
                                             </button>
                                             <div class="mode-dropdown-menu" id="mode-dropdown-menu">
                                                 <div class="mode-option active" data-mode="general">
@@ -239,14 +244,19 @@
 
             <!-- Global Math Keyboard / Symbol Toolbar (placed before floating wrapper for better flow) -->
             <div class="math-toolbar" id="math-toolbar">
-                <div class="math-toolbar-tabs">
-                    <button class="math-tab active" data-tab="popular">Popular</button>
-                    <button class="math-tab" data-tab="trig">sin cos</button>
-                    <button class="math-tab" data-tab="calculus">Calculus</button>
-                    <button class="math-tab" data-tab="comparison">≥ ≠</button>
-                    <button class="math-tab" data-tab="sets">∈ ⊂</button>
-                    <button class="math-tab" data-tab="arrows">→</button>
-                    <button class="math-tab" data-tab="greek">Ωα</button>
+                <div class="math-toolbar-header">
+                    <div class="math-toolbar-tabs">
+                        <button class="math-tab active" data-tab="popular">Popular</button>
+                        <button class="math-tab" data-tab="trig">sin cos</button>
+                        <button class="math-tab" data-tab="calculus">Calculus</button>
+                        <button class="math-tab" data-tab="comparison">≥ ≠</button>
+                        <button class="math-tab" data-tab="sets">∈ ⊂</button>
+                        <button class="math-tab" data-tab="arrows">→</button>
+                        <button class="math-tab" data-tab="greek">Ωα</button>
+                    </div>
+                    <button class="math-toolbar-close" id="math-toolbar-close" title="Close Toolbar">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
                 </div>
                 <div class="math-symbols-grid" id="math-symbols-grid">
                     <button class="math-sym-btn" data-insert="/" title="Fraction">⁄</button>
@@ -296,13 +306,15 @@
                                     <span class="material-symbols-outlined">calculate</span>
                                 </button>
                                 <button class="math-mode-btn" id="chat-math-keyboard-toggle" title="Symbols">
-                                    <span class="material-symbols-outlined" style="font-size: 18px;">functions</span>
+                                    <span class="material-symbols-outlined dropdown-icon" style="font-size: 18px;">functions</span>
                                     <span>Symbols</span>
                                 </button>
-                                <button class="math-mode-btn" id="tool-create-graph" onclick="toggleGraphBar()" title="Tools">
-                                    <span class="material-symbols-outlined" style="font-size: 18px;">grid_view</span>
+                                <button class="math-mode-btn" id="tool-create-graph" onclick="toggleGraphBar()"
+                                    title="Tools">
+                                    <span class="material-symbols-outlined dropdown-icon" style="font-size: 18px;">grid_view</span>
                                     <span>Tools</span>
-                                    <span class="material-symbols-outlined" style="font-size: 14px; margin-left: 2px;">expand_more</span>
+                                    <span class="material-symbols-outlined"
+                                        style="font-size: 14px; margin-left: 2px;">expand_more</span>
                                 </button>
                             </div>
                             <div class="search-actions">
@@ -310,7 +322,8 @@
                                     <button class="mode-dropdown-btn" id="chat-mode-btn">
                                         <span class="material-symbols-outlined dropdown-icon">auto_awesome</span>
                                         <span class="dropdown-text">General</span>
-                                        <span class="material-symbols-outlined" style="font-size: 14px;">expand_more</span>
+                                        <span class="material-symbols-outlined"
+                                            style="font-size: 14px;">expand_more</span>
                                     </button>
                                     <div class="mode-dropdown-menu" id="chat-mode-dropdown-menu">
                                         <div class="mode-option active" data-mode="general">
@@ -380,7 +393,8 @@
                 <span class="material-symbols-outlined graph-bar-icon">show_chart</span>
                 <input id="fn-input" type="text" placeholder="e.g. sin(x), x^2 + 3x - 2" class="graph-bar-input">
                 <button onclick="plotFnToChat()" class="graph-bar-plot-btn">Plot</button>
-                <button onclick="document.getElementById('graph-input-bar').style.display='none'" class="graph-bar-close-btn">
+                <button onclick="document.getElementById('graph-input-bar').style.display='none'"
+                    class="graph-bar-close-btn">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
@@ -405,6 +419,9 @@
 
         // Function to generate a UUID for sessions
         function generateUUID() {
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                return crypto.randomUUID();
+            }
             return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
                 var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
                 return v.toString(16);
@@ -636,6 +653,7 @@
                 // Handle Logout
                 document.getElementById('logout-btn').addEventListener('click', async function (e) {
                     e.preventDefault();
+                    if (!confirm("Are you sure you want to log out?")) return;
                     await supabase.auth.signOut();
                     window.location.reload();
                 });
@@ -763,9 +781,13 @@
             window.isChatActive = false;
 
             // Auto-resize textarea
+            let resizeTimeout;
             function autoResize(el) {
-                el.style.height = 'auto';
-                el.style.height = Math.min(el.scrollHeight, 180) + 'px';
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    el.style.height = 'auto';
+                    el.style.height = Math.min(el.scrollHeight, 180) + 'px';
+                }, 50);
             }
             searchInput.addEventListener('input', () => autoResize(searchInput));
 
@@ -785,12 +807,16 @@
             // --- Markdown Formatter ---
             function formatMessage(text) {
                 if (!text) return "";
-                text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
-                text = text.replace(/`(.*?)`/g, '<code class="inline-code">$1</code>');
-                text = text.replace(/```([\s\S]*?)```/g, '<pre class="code-block"><code>$1</code></pre>');
-                text = text.replace(/\n/g, '<br>');
-                return text;
+                const div = document.createElement('div');
+                div.textContent = text;
+                let escaped = div.innerHTML;
+
+                escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                escaped = escaped.replace(/\*(.*?)\*/g, '<em>$1</em>');
+                escaped = escaped.replace(/`(.*?)`/g, '<code class="inline-code">$1</code>');
+                escaped = escaped.replace(/```([\s\S]*?)```/g, '<pre class="code-block"><code>$1</code></pre>');
+                escaped = escaped.replace(/(?:\r\n|\r|\n)/g, '<br>');
+                return escaped;
             }
 
             // Function to add a message bubble
@@ -911,7 +937,7 @@
                 const activeSendBtn = window.isChatActive ? (document.getElementById('chat-send-btn') || sendBtn) : sendBtn;
                 const chatSendBtn = document.getElementById('chat-send-btn');
                 const sendBtnIcon = activeSendBtn.querySelector('.send-icon');
-                
+
                 window.isStreaming = true;
                 sendBtn.disabled = true;
                 if (chatSendBtn) chatSendBtn.disabled = true;
@@ -924,11 +950,7 @@
                         formData.append('file', selectedImageFile);
                         if (currentUserId) formData.append('user_id', currentUserId);
 
-                        const origin = window.location.origin;
-                        let OCR_URL = "https://sphinx-gpt-beta-production.up.railway.app/ocr";
-                        if (origin.includes('localhost') || origin.includes('127.0.0.1') || window.location.protocol === 'file:') {
-                            OCR_URL = "http://localhost:8000/ocr";
-                        }
+                        const OCR_URL = "/ocr";
 
                         const ocrResponse = await fetch(OCR_URL, {
                             method: 'POST',
@@ -963,12 +985,7 @@
 
                 // Connect to Backend for Solving
                 try {
-                    const origin = window.location.origin;
-                    let API_URL = "https://sphinx-gpt-beta-production.up.railway.app";
-                    // Also handle file:// protocol for local testing by checking protocol or hostname
-                    if (origin.includes('localhost') || origin.includes('127.0.0.1') || window.location.protocol === 'file:') {
-                        API_URL = "http://localhost:8000";
-                    }
+                    let API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? "http://localhost:8000" : "https://sphinx-gpt-beta-production.up.railway.app";
 
                     const historyForBackend = [];
                     const messageElements = chatMessages.querySelectorAll('.message');
@@ -1099,8 +1116,17 @@
                 chatMathToggle?.classList.toggle('active', isVisible);
             };
 
+            const closeMathToolbar = () => {
+                mathToolbar.classList.remove('visible');
+                heroMathToggle?.classList.remove('active');
+                chatMathToggle?.classList.remove('active');
+            };
+
             if (heroMathToggle && mathToolbar) heroMathToggle.addEventListener('click', toggleMathToolbar);
             if (chatMathToggle && mathToolbar) chatMathToggle.addEventListener('click', toggleMathToolbar);
+            
+            const mathToolbarClose = document.getElementById('math-toolbar-close');
+            if (mathToolbarClose) mathToolbarClose.addEventListener('click', closeMathToolbar);
 
             // --- Math Symbol Insertion ---
             const mathSymBtns = document.querySelectorAll('.math-sym-btn');
@@ -1255,6 +1281,9 @@
             if (calcCloseBtn && calculatorPanel) {
                 calcCloseBtn.addEventListener('click', () => {
                     calculatorPanel.classList.remove('open');
+                    calcExpression = '';
+                    const display = document.getElementById('calcDisplay');
+                    if (display) display.textContent = '0';
                 });
             }
             // Calculator button clicks via delegation
@@ -1369,7 +1398,7 @@
             function dragElement(elmnt) {
                 var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
                 var handle = elmnt.querySelector('.drag-handle');
-                
+
                 if (handle) {
                     handle.onmousedown = dragMouseDown;
                 } else {
@@ -1379,7 +1408,7 @@
                 function dragMouseDown(e) {
                     e = e || window.event;
                     e.preventDefault();
-                    
+
                     // Capture current position before switching to explicit top/left
                     var rect = elmnt.getBoundingClientRect();
                     elmnt.style.top = rect.top + "px";
@@ -1460,7 +1489,7 @@
                     // Show the floating input bar for chat mode if it exists
                     var floatingWrapper = document.getElementById('floating-search-wrapper');
                     if (floatingWrapper) floatingWrapper.style.display = 'flex';
-                    
+
                     // Mark chat as active
                     if (window.hasOwnProperty('isChatActive')) window.isChatActive = true;
                 }
@@ -1503,8 +1532,22 @@
                         }
                     };
 
-                    var ggb = new GGBApplet(appletParams, true);
-                    ggb.inject(bubbleId);
+                    if (typeof GGBApplet !== 'undefined') {
+                        var ggb = new GGBApplet(appletParams, true);
+                        ggb.inject(bubbleId);
+                    } else {
+                        var script = document.createElement('script');
+                        script.src = "https://www.geogebra.org/apps/deployggb.js";
+                        script.onload = function () {
+                            var ggb = new GGBApplet(appletParams, true);
+                            ggb.inject(bubbleId);
+                        };
+                        script.onerror = function () {
+                            console.error('GeoGebra script failed to load.');
+                            container.innerHTML = '<div style="padding: 20px; color: red;">Failed to load Graphing engine. Please check your internet connection or disable adblockers.</div>';
+                        };
+                        document.head.appendChild(script);
+                    }
                 }, 300);
             };
         })();
