@@ -548,7 +548,7 @@ async function handleSend(type) {
     let gotFirstToken = false;
 
     try {
-        const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+        const API_URL = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL ? String(import.meta.env.VITE_API_URL).replace(/\/$/, '') : (window.location.hostname === 'localhost' ? 'http://localhost:8000' : '');
         const response = await fetch(`${API_URL}/solve_stream`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -612,7 +612,7 @@ async function handleStudySend(text, imageUrl, type) {
     showSkeleton(aiTextDiv);
 
     state.isStreaming = true;
-    const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+    const API_URL = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL ? String(import.meta.env.VITE_API_URL).replace(/\/$/, '') : (window.location.hostname === 'localhost' ? 'http://localhost:8000' : '');
 
     try {
         // ── FIX 2: Classify LOCALLY — no API call needed ──────────
@@ -802,7 +802,7 @@ function classifyIntentLocal(text) {
 function appendStudyActions(aiMsgDiv, mode = 'active') {
     const actionsDiv = document.createElement('div');
     actionsDiv.className = 'study-actions';
-    const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+    const API_URL = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL ? String(import.meta.env.VITE_API_URL).replace(/\/$/, '') : (window.location.hostname === 'localhost' ? 'http://localhost:8000' : '');
 
     if (mode === 'active') {
         // ── HINT BUTTON ──
@@ -981,7 +981,7 @@ async function handleEndSession() {
     const summaryTextDiv = summaryMsgDiv.querySelector('.text-body');
     showSkeleton(summaryTextDiv);
     try {
-        const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+        const API_URL = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL ? String(import.meta.env.VITE_API_URL).replace(/\/$/, '') : (window.location.hostname === 'localhost' ? 'http://localhost:8000' : '');
         const res = await fetch(`${API_URL}/study/summary`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ session_id: state.activeStudySessionId, question: state.studyOriginalQuestion, branch: state.studyBranch, user_id: state.currentUserId })
