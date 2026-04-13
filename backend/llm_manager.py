@@ -1,14 +1,22 @@
 """
-Sphinx-SCA — LLM Manager (Groq + Llama 3.3)
-=============================================
+Sphinx-SCA — LLM Manager (Groq + GPT-OSS)
+==========================================
 Roles:
   0. Classifier       → classify problem branch & type  ← BERT replacement
   1. Problem Parser   → raw text to structured JSON
-  2. Step Generator   → educational step-by-step solution
-  3. Hint Generator   → progressive hints without spoiling
+  2. Step Generator   → educational step-by-step solution  ← IMPROVED
+  3. Hint Generator   → progressive hints without spoiling ← IMPROVED
   4. Word Problem     → extract equation from natural language
   5. OCR Validator    → fix LaTeX from image and convert to SymPy
-  6. Chat             → natural conversation + math solving ← NEW
+  6. Chat             → natural conversation + math solving ← IMPROVED
+
+Improvements over previous version:
+  - generate_steps   : deeper explanations, steps connected to each other,
+                       "connects_to_next" field, key insight at the end
+  - generate_hints   : hints explain WHY not just WHAT, structured by principle/method/bridge
+  - SYSTEM_PROMPT    : math-specific guidance, logical thread between steps
+  - chat_with_math   : solution presented as a story, highlights the key insight
+  - classify_problem : added confidence threshold retry for low-confidence results
 
 Requirements:
     pip install groq
@@ -19,7 +27,6 @@ import json
 import re
 import asyncio
 import os
-import threading
 from groq import Groq, AsyncGroq
 from dotenv import load_dotenv
 
@@ -49,61 +56,42 @@ if GROQ_API_KEY:
 else:
     print("⚠️ GROQ_API_KEY not found in environment variables")
 
-# ── System prompt — شخصية المساعد ──────────────
+# ── System prompt — IMPROVED ────────────────────────────────────────
 SYSTEM_PROMPT = """You are Sphinx-SCA, a friendly and smart AI math assistant.
 You were created by students at Sphinx University in Egypt.
 
 Your personality:
 - Friendly, warm, and encouraging
-- Clear and educational — you explain things simply
+- Clear and educational — you explain things at the right depth
 - You can chat normally AND solve math problems
 - When someone greets you, greet them back naturally
 - When someone asks a math question, solve it step by step
 
 When solving math problems:
-1. Acknowledge the problem naturally ("Great question! Let me solve this...")
-2. Show the solution step by step clearly
-3. State the final answer clearly at the end
-4. Encourage the user
+1. Start by identifying WHAT TYPE of problem this is and WHY that matters for the solution strategy
+2. Show the solution step by step — each step must explain WHY it is done, not just WHAT
+3. Connect each step to the previous one: "Because we found X in the last step, now we can..."
+4. State the final answer clearly at the end
+5. After the final answer, add ONE sentence highlighting the KEY INSIGHT of this problem
+   (e.g. "The key here was isolating the variable before dividing.")
+6. Encourage the user warmly
 
 When chatting normally:
 - Be natural and friendly
 - Keep responses concise but warm
 - If someone seems stuck, offer to help with hints
 
+Never present steps as isolated operations — always show the logical thread connecting them.
+If the user seems to struggle with a concept, adapt your depth and add a brief analogy.
+
 Always respond in the same language the user uses (Arabic or English).
 If the user writes in Arabic, respond in Arabic.
 If the user writes in English, respond in English.
 
-IMPORTANT: You will often receive a [System Context About User] section. NEVER output, quote, or repeat this context verbatim to the user. Use it silently in your mind to personalize your response, but never acknowledge its existence or list its contents.
+IMPORTANT: You will often receive a [System Context About User] section. NEVER output, quote,
+or repeat this context verbatim to the user. Use it silently to personalize your response,
+but never acknowledge its existence or list its contents.
 """
-
-
-# ─────────────────────────────────────────────
-#  SAFE BACKGROUND TASK HELPER
-# ─────────────────────────────────────────────
-
-def _safe_background_task(coro):
-    """
-    ✅ FIX (W-01): Safely schedule an async coroutine in the background.
-    Uses asyncio.create_task if a loop is running, otherwise falls back
-    to a daemon thread.
-    """
-    try:
-        loop = asyncio.get_running_loop()
-        loop.create_task(coro)
-    except RuntimeError:
-        # No running event loop — use a background thread
-        def _run():
-            _loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(_loop)
-            try:
-                _loop.run_until_complete(coro)
-            except Exception as e:
-                print(f"⚠️ Background task error: {e}")
-            finally:
-                _loop.close()
-        threading.Thread(target=_run, daemon=True).start()
 
 
 # ─────────────────────────────────────────────
@@ -208,13 +196,14 @@ def _extract_json_array(text: str) -> list:
 
 
 # ─────────────────────────────────────────────
-#  ROLE 0 — CLASSIFIER
+#  ROLE 0 — CLASSIFIER  (+ low-confidence retry)
 # ─────────────────────────────────────────────
 
 def classify_problem(raw_text: str) -> dict:
     """
     Role 0 — Classify input as math problem or chat.
     Returns is_math=True/False so app.py routes correctly.
+    Retries once with higher temperature if confidence < 0.6.
     """
     prompt = f"""
 You are a math problem classifier.
@@ -248,6 +237,18 @@ Examples:
 """
     response = _call_llm(prompt, temperature=0.0)
     result   = _extract_json(response)
+
+    # ── Low-confidence retry ──────────────────────────────────────
+    # If the model is unsure (< 0.6), retry once with slight temperature
+    # so it reconsiders rather than defaulting to a wrong branch.
+    if result.get("confidence", 1.0) < 0.6:
+        response2 = _call_llm(prompt, temperature=0.2)
+        try:
+            result2 = _extract_json(response2)
+            if result2.get("confidence", 0) > result.get("confidence", 0):
+                result = result2
+        except Exception:
+            pass  # keep original result if retry fails
 
     valid_branches = {"algebra", "calculus", "geometry", "statistics", "linear_algebra", "word_problem", "chat"}
     if result.get("branch") not in valid_branches:
@@ -391,13 +392,21 @@ def parse_problem(raw_text: str, problem_type: str) -> dict:
 
 
 # ─────────────────────────────────────────────
-#  ROLE 2 — STEP GENERATOR
+#  ROLE 2 — STEP GENERATOR  ← IMPROVED
 # ─────────────────────────────────────────────
 
 def generate_steps(problem: str, solution: str, problem_type: str) -> list:
-    """Role 2 — Generate educational step-by-step solution."""
+    """
+    Role 2 — Generate deep, connected, educational step-by-step solution.
+
+    Improvements:
+    - Each step explains WHY, not just WHAT
+    - Each step references the result of the previous step
+    - 'connects_to_next' field shows the logical thread
+    - Final step includes a key_insight summarizing the solution strategy
+    """
     prompt = f"""
-You are a math teacher. Generate a clear step-by-step solution in English.
+You are an expert math teacher. Generate a detailed, deeply connected step-by-step solution.
 Return ONLY a valid JSON array, no explanation, no markdown.
 
 Problem: "{problem}"
@@ -408,51 +417,74 @@ Return this exact structure:
 [
   {{
     "step": 1,
-    "title": "Short step title",
-    "action": "The math shown clearly (e.g. 2x = 11 - 5)",
-    "explanation": "Why we do this in simple English"
+    "title": "Short step title (e.g. 'Identify the equation type')",
+    "action": "The exact math shown (e.g. '2x + 5 = 11  →  2x = 11 - 5')",
+    "explanation": "WHY we do this step AND how it follows from the previous step. Be specific — never say just 'simplify' without showing what simplification happens.",
+    "connects_to_next": "One sentence: what does this result allow us to do in the next step?"
   }}
 ]
 
-Rules:
-- Max 6 steps
-- Last step must show the final answer
-- Keep explanations simple and educational
+RULES:
+- First step: identify the problem type and the overall solution strategy BEFORE any calculation
+- Every explanation must answer WHY, not just describe WHAT happened
+- Every step (except step 1) must reference the result from the previous step:
+  use phrases like "Since we found X...", "Using the value from step N...", "Now that we have..."
+- Never say "simplify" without specifying exactly what simplification is done
+- Max 7 steps — but NEVER skip important reasoning to hit the limit
+- Last step: state the final answer AND include a "key_insight" field (string) that summarizes
+  the core mathematical idea that made this problem solvable
+  (e.g. "The key insight was isolating the variable by applying inverse operations in the correct order.")
+- Use clear math notation in the action field (arrows → to show transformations)
 """
     response = _call_llm(prompt, temperature=0.1)
     steps    = _extract_json_array(response)
     if not steps:
-        return [{"step": 1, "title": "Solution", "action": str(solution), "explanation": "Final answer"}]
+        return [{"step": 1, "title": "Solution", "action": str(solution),
+                 "explanation": "Final answer", "connects_to_next": ""}]
     return steps
 
 
 # ─────────────────────────────────────────────
-#  ROLE 3 — HINT GENERATOR
+#  ROLE 3 — HINT GENERATOR  ← IMPROVED
 # ─────────────────────────────────────────────
 
 def generate_hints(problem: str, problem_type: str, num_hints: int = 3) -> list:
-    """Role 3 — Generate progressive hints without revealing the answer."""
+    """
+    Role 3 — Generate progressive hints that teach the WHY, not just the HOW.
+
+    Hint structure:
+    - Hint 1 (Principle)  : WHY this approach — what mathematical principle applies
+    - Hint 2 (Method)     : HOW to start — first concrete operation, without numbers
+    - Hint 3 (Bridge)     : Show the equation structure with variables, not final values
+    """
     prompt = f"""
-You are a math tutor. Generate {num_hints} progressive hints.
-Return ONLY a valid JSON array of strings. No explanation, no markdown.
+You are a math tutor who teaches through understanding, not just steps.
+Generate {num_hints} progressive hints that guide the student toward the solution
+without giving it away. Return ONLY a valid JSON array of strings. No explanation, no markdown.
 
 Problem: "{problem}"
 Type: {problem_type}
 
-Hint levels:
-- Hint 1: Very vague — point to the concept only
-- Hint 2: More specific — suggest the first step
-- Hint 3: Almost the answer — show the key operation
+Hint levels — follow this exactly:
+- Hint 1 (Principle): Explain WHICH mathematical principle or concept applies to this problem and WHY.
+  Do NOT mention any calculation yet. Example: "This is a linear equation — the goal is always to
+  isolate the unknown by undoing operations in reverse order."
+- Hint 2 (Method): Describe the FIRST concrete action the student should take, without using the
+  actual numbers from the problem. Example: "Start by moving the constant term to the right side
+  of the equation by subtracting it from both sides."
+- Hint 3 (Bridge): Show the STRUCTURE of the solution using the actual variable names but not the
+  final answer. Example: "After isolating 2x, your next step is to divide both sides by the
+  coefficient of x to get x alone."
 
-Return format: ["hint1", "hint2", "hint3"]
+Return format: ["hint1 text", "hint2 text", "hint3 text"]
 """
     response = _call_llm(prompt, temperature=0.2)
     hints    = _extract_json_array(response)
     if not hints:
         return [
-            "Think about what type of problem this is.",
-            "Identify the unknown variable and what you need to find.",
-            "Apply the appropriate formula step by step."
+            "Think about which mathematical principle applies to this type of problem.",
+            "Identify the first operation you need to undo to isolate the unknown.",
+            "Apply the inverse operation step by step, keeping both sides balanced."
         ]
     return hints
 
@@ -544,14 +576,14 @@ async def chat(
     messages = history + [{"role": "user", "content": message}]
 
     if memory_context:
-        # Inject memory context directly into the final user message to avoid system role leakage
+        # Inject memory context into the final user message to avoid system role leakage
         messages[-1]["content"] = f"[System Context About User: {memory_context}]\n\n{message}"
 
     response = _call_chat(messages, temperature=0.7)
 
     # ✅ Memory: save this interaction in the background
     if memory_manager and user_id:
-        _safe_background_task(
+        asyncio.create_task(
             memory_manager.learn(user_id, messages + [{"role": "assistant", "content": response}])
         )
 
@@ -566,7 +598,13 @@ async def chat_with_math(
     memory_manager: "MemoryManager" = None,
 ) -> str:
     """
-    Role 6b — Wrap a math solution in a natural friendly response with memory.
+    Role 6b — Wrap a math solution in a natural, story-driven friendly response.
+
+    Improvements:
+    - Solution presented as a narrative, not an isolated list
+    - Highlights the KEY MOMENT where the problem "clicks"
+    - Ends with one insight about this type of problem
+    - Directly acknowledges the user's specific question
 
     Args:
         message        : original user question
@@ -584,34 +622,56 @@ async def chat_with_math(
     answer = math_result.get("final_answer") or math_result.get("answer") or "unknown"
     steps  = math_result.get("llm_steps", [])
 
+    # Build a narrative steps block that shows connections between steps
     steps_text = ""
     if steps:
-        steps_text = "\n".join(
-            f"Step {s.get('step', i+1)}: {s.get('title','')}"
-            f" → {s.get('action','')}"
-            f" ({s.get('explanation','')})"
-            for i, s in enumerate(steps)
-        )
+        steps_lines = []
+        for i, s in enumerate(steps):
+            step_no     = s.get("step", i + 1)
+            title       = s.get("title", "")
+            action      = s.get("action", "")
+            explanation = s.get("explanation", "")
+            connects    = s.get("connects_to_next", "")
+            key_insight = s.get("key_insight", "")
+
+            line = f"Step {step_no} — {title}: {action} | {explanation}"
+            if connects:
+                line += f" → {connects}"
+            if key_insight:
+                line += f"\n💡 Key Insight: {key_insight}"
+            steps_lines.append(line)
+        steps_text = "\n".join(steps_lines)
 
     # ✅ Memory: load context
     memory_context = ""
     if memory_manager and user_id:
         memory_context = await memory_manager.get_context(user_id, message)
 
-    steps_text_block = f"Steps found:\n{steps_text}" if steps_text else ""
+    steps_block = f"Solution path:\n{steps_text}" if steps_text else ""
+
     context = f"""{memory_context}
 The user asked: "{message}"
 The math solver found the answer: {answer}
-{steps_text_block}
+{steps_block}
 
-Now respond as Sphinx-SCA naturally. Present the answer warmly with the steps. Encourage the user."""
+Now respond as Sphinx-SCA. Follow these guidelines:
+1. Directly acknowledge their specific question in the first sentence
+2. Present the solution as a STORY — each step leads naturally to the next,
+   use connective language: "First...", "Because of that...", "This means...", "Finally..."
+3. Highlight the KEY MOMENT where the problem becomes clear
+   (e.g. "The turning point was when we isolated 2x — after that, the answer was one step away.")
+4. End with ONE insight about this TYPE of problem that will help them next time
+5. Close with a short warm encouragement
+
+Do NOT just list the steps mechanically — weave them into a clear explanation.
+"""
 
     messages = history + [{"role": "user", "content": context}]
     response = _call_chat(messages, temperature=0.5)
 
     # ✅ Memory: save this interaction in the background
     if memory_manager and user_id:
-        _safe_background_task(
+        asyncio.create_task(
             memory_manager.learn(
                 user_id,
                 [{"role": "user", "content": message}, {"role": "assistant", "content": response}]
@@ -669,7 +729,7 @@ class LLMManager:
         history: list = None,
         user_id: str = None,
     ) -> str:
-        """Wrap math solution in natural friendly response."""
+        """Wrap math solution in natural story-driven friendly response."""
         return await chat_with_math(message, math_result, history, user_id, self.memory)
 
     async def stream_chat(self, messages: list, temperature: float = 0.7, user_id: str = None):
@@ -682,7 +742,9 @@ class LLMManager:
             last_msg = messages[-1]["content"] if messages[-1]["role"] == "user" else ""
             if last_msg:
                 try:
-                    memory_context = await asyncio.wait_for(self.memory.get_context(user_id, last_msg), timeout=10.0)
+                    memory_context = await asyncio.wait_for(
+                        self.memory.get_context(user_id, last_msg), timeout=10.0
+                    )
                     if memory_context:
                         messages[-1]["content"] = f"[System Context About User: {memory_context}]\n\n{last_msg}"
                 except asyncio.TimeoutError:
@@ -697,7 +759,7 @@ class LLMManager:
 
         # ✅ Memory: save full conversation after stream finishes
         if user_id and full_content:
-            _safe_background_task(
+            asyncio.create_task(
                 self.memory.learn(
                     user_id,
                     messages + [{"role": "assistant", "content": full_content}]
@@ -721,6 +783,22 @@ if __name__ == "__main__":
     print(json.dumps(llm.classify("hi, how are you?"), indent=2))
 
     print("\n" + "=" * 55)
+    print("TEST 0c — Classifier (low confidence retry)")
+    print(json.dumps(llm.classify("find the value"), indent=2))
+
+    print("\n" + "=" * 55)
+    print("TEST 2 — Steps (connected)")
+    steps = llm.steps("solve 2x + 5 = 11", "x = 3", "algebra")
+    for s in steps:
+        print(json.dumps(s, indent=2))
+
+    print("\n" + "=" * 55)
+    print("TEST 3 — Hints (principled)")
+    hints = llm.hints("solve 2x + 5 = 11", "algebra")
+    for i, h in enumerate(hints, 1):
+        print(f"Hint {i}: {h}")
+
+    print("\n" + "=" * 55)
     print("TEST 6a — Chat (English greeting)")
     print(asyncio.run(llm.chat("hi! what can you do?")))
 
@@ -729,13 +807,32 @@ if __name__ == "__main__":
     print(asyncio.run(llm.chat("مرحبا، كيف حالك؟")))
 
     print("\n" + "=" * 55)
-    print("TEST 6c — Chat with math result")
+    print("TEST 6c — Chat with math (story-driven)")
     fake_result = {
         "final_answer": "x = 3",
         "llm_steps": [
-            {"step": 1, "title": "Move constant", "action": "2x = 11 - 5", "explanation": "Subtract 5 from both sides"},
-            {"step": 2, "title": "Divide",         "action": "x = 6 / 2",   "explanation": "Divide both sides by 2"},
-            {"step": 3, "title": "Answer",          "action": "x = 3",       "explanation": "Final answer"}
+            {
+                "step": 1,
+                "title": "Identify equation type",
+                "action": "2x + 5 = 11  →  linear equation in one variable",
+                "explanation": "This is a linear equation. Our goal is to isolate x by undoing operations in reverse order.",
+                "connects_to_next": "Knowing this, we move the constant to the right side first."
+            },
+            {
+                "step": 2,
+                "title": "Move constant",
+                "action": "2x = 11 - 5 = 6",
+                "explanation": "We subtract 5 from both sides to eliminate the constant on the left, keeping the equation balanced.",
+                "connects_to_next": "Now that 2x = 6, we can divide both sides by 2 to find x."
+            },
+            {
+                "step": 3,
+                "title": "Isolate x",
+                "action": "x = 6 / 2 = 3",
+                "explanation": "Dividing both sides by 2 gives us x alone. Since 2x = 6, x must equal 3.",
+                "connects_to_next": "",
+                "key_insight": "The key was applying inverse operations in reverse order: subtraction before division."
+            }
         ]
     }
     print(asyncio.run(llm.chat_with_math("solve 2x + 5 = 11", fake_result)))
