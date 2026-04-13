@@ -802,10 +802,13 @@ ALLOWED_FILES = [
 async def home():
     return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
 
-@app.get("/{filename}")
-async def serve_static(filename: str):
-    if filename in ALLOWED_FILES:
-        return FileResponse(os.path.join(FRONTEND_DIR, filename))
+@app.get("/{file_path:path}")
+async def serve_static(file_path: str):
+    full_path = os.path.join(FRONTEND_DIR, file_path)
+    # Basic directory traversal protection
+    if os.path.abspath(full_path).startswith(os.path.abspath(FRONTEND_DIR)):
+        if os.path.exists(full_path) and os.path.isfile(full_path):
+            return FileResponse(full_path)
     return JSONResponse({"error": "File not found"}, status_code=404)
 
 # ─────────────────────────────────────────────
