@@ -7,6 +7,32 @@ import { formatMessage } from './markdown.js';
 import { imageState, removeImagePreview, setImageUploadUI } from './imageUpload.js';
 import { escapeAttr } from './helpers.js';  // ✅ FIX (C-03): import for URL sanitization
 
+// ── Search Sources Renderer ──────────────────────────────────
+window.renderSearchSources = function(msgDiv, data) {
+    if (!msgDiv || !data || !data.sources || data.sources.length === 0) return;
+    const isYT = data.mode === 'YOUTUBE_SEARCH';
+    const iconName = isYT ? 'smart_display' : 'public';
+    let html = '<div class="search-sources-container" style="margin-top:16px;border-top:1px solid var(--border-color, #333);padding-top:12px;">';
+    html += `<div style="font-size:12px;color:var(--text-secondary, #888);margin-bottom:10px;display:flex;align-items:center;gap:5px;"><span class="material-symbols-outlined" style="font-size:16px;">${iconName}</span>Sources</div>`;
+    html += '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
+    data.sources.forEach(src => {
+        let domain = '';
+        try { domain = new URL(src.url).hostname.replace('www.', ''); } catch(e){}
+        html += `<a href="${src.url}" target="_blank" rel="noopener" style="display:flex;flex-direction:column;padding:8px 12px;background:var(--bg-secondary, #1a1a2e);border:1px solid var(--border-color, #333);border-radius:8px;text-decoration:none;max-width:200px;transition:all 0.2s;cursor:pointer;" onmouseover="this.style.borderColor='var(--primary, #e94560)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--border-color, #333)';this.style.transform=''"><span style="font-size:13px;color:var(--text-primary, #eee);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${src.title}</span><span style="font-size:11px;color:var(--text-secondary, #888);">${domain}</span></a>`;
+    });
+    html += '</div></div>';
+    const contentDiv = msgDiv.querySelector('.message-content');
+    if (contentDiv) {
+        const existing = contentDiv.querySelector('.search-sources-container');
+        if (existing) existing.outerHTML = html;
+        else {
+            const textBody = contentDiv.querySelector('.text-body');
+            if (textBody) textBody.insertAdjacentHTML('afterend', html);
+            else contentDiv.innerHTML += html;
+        }
+    }
+};
+
 // ── References set by initChat ────────────────────────────────
 let _chatMessages, _chatInterface, _heroSection, _searchInput;
 let _saveMessageFn = null; // set externally by app.js
@@ -105,6 +131,24 @@ export async function handleSend() {
     if (!_searchInput) _searchInput = document.getElementById('main-search-input');
     const activeInput = appState.isChatActive && chatInput ? chatInput : _searchInput;
     const msg = activeInput?.value || '';
+
+    // ── Graph Mode Intercept ──
+    // When graph mode is active, plot the equation instead of sending to AI
+    if (appState.graphMode && msg.trim()) {
+        const expr = msg.trim();
+        activeInput.value = '';
+        if (typeof autoResize === 'function') autoResize(activeInput);
+        // Plot the function
+        if (typeof window.plotFnToChat === 'function') {
+            window.plotFnToChat(expr);
+        }
+        // Auto-exit graph mode after plotting
+        if (typeof window.toggleGraphMode === 'function') {
+            window.toggleGraphMode();
+        }
+        return;
+    }
+
     if (!msg.trim() && !imageState.file) return;
 
     let finalMsg = msg || 'Solve this math problem from the image.';
@@ -239,12 +283,22 @@ export async function handleSend() {
                 try {
                     const data = JSON.parse(dataStr);
                     if (data && typeof data.content === 'string' && data.content.length) {
+                        if (data.content.includes('__SEARCH_SOURCES__')) {
+                            const match = data.content.match(/```json\n__SEARCH_SOURCES__\n([\s\S]*?)\n```/);
+                            if (match) {
+                                try { appState.currentSourcesJson = JSON.parse(match[1]); } catch(e){}
+                            }
+                            continue;
+                        }
                         if (!gotFirstToken) {
                             gotFirstToken = true;
                             const sk = aiTextDiv?.querySelector('[data-role="skeleton"]');
                             if (sk) sk.remove();
                         }
                         fullAiResponse += data.content;
+                        if (fullAiResponse.includes('<!-- SEARCH_DONE -->')) {
+                            fullAiResponse = fullAiResponse.replace('is-active', '').replace('Searching ', 'Searched ').replace(/<!-- SEARCH_DONE -->\n*/g, '');
+                        }
                         renderStreamingText();
                     }
                 } catch { /* partial JSON, ignore */ }
@@ -258,7 +312,13 @@ export async function handleSend() {
         if (sendBtnIcon) sendBtnIcon.textContent = 'arrow_upward';
 
         // Final render (no cursor)
-        if (aiTextDiv) aiTextDiv.innerHTML = formatMessage(fullAiResponse || '');
+        if (aiTextDiv) {
+             aiTextDiv.innerHTML = formatMessage(fullAiResponse || '');
+             if (appState.currentSourcesJson && appState.currentSourcesJson.sources) {
+                 window.renderSearchSources(aiMsgDiv, appState.currentSourcesJson);
+                 appState.currentSourcesJson = null;
+             }
+        }
 
         if (fullAiResponse) {
             try { if (_saveMessageFn) await _saveMessageFn(fullAiResponse, 'ai'); } catch { /* ignore */ }

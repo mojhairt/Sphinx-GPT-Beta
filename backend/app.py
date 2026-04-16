@@ -76,6 +76,30 @@ else:
     print("⚠️ LLM Manager class could not be imported")
 
 # ─────────────────────────────────────────────
+# LOAD SEARCH AGENT
+# ─────────────────────────────────────────────
+
+try:
+    from backend.search_agent import ARIAAgent
+except ImportError:
+    try:
+        from search_agent import ARIAAgent
+    except ImportError:
+        ARIAAgent = None
+
+if ARIAAgent:
+    try:
+        # Pass tokens and context lengths manually if needed, or stick to defaults
+        search_agent = ARIAAgent()
+        print("✅ Search Agent loaded")
+    except Exception as e:
+        search_agent = None
+        print("⚠️ Search Agent failed:", e)
+else:
+    search_agent = None
+    print("⚠️ Search Agent class could not be imported")
+
+# ─────────────────────────────────────────────
 # LOGGING
 # ─────────────────────────────────────────────
 
@@ -255,6 +279,9 @@ class CheckRequest(BaseModel):
     student_answer: str = Field(..., max_length=5000)
     correct_answer: str = Field(..., max_length=5000)
     user_id: Optional[str] = None          # ✅ Memory: user identity for study mode
+
+class TitleRequest(BaseModel):
+    text: str = Field(..., max_length=10000)
 
 # ─────────────────────────────────────────────
 # SOLVER HELPER
@@ -527,6 +554,18 @@ def render_study_markdown(result: dict) -> str:
 # ─────────────────────────────────────────────
 
 # ── Intent-based fast endpoints ──────────────────────────────────
+#khairy update اضافة خاصية استنتاج عنوان المحادثة   
+@app.post("/generate_title")
+async def generate_title(req: TitleRequest):
+    """Generate a short Arabic title for a conversation."""
+    if llm is None:
+        return {"title": req.text[:30]}
+    try:
+        title = await asyncio.to_thread(llm.generate_title, req.text)
+        return {"title": title}
+    except Exception as e:
+        logger.error(f"Title generation failed: {e}")
+        return {"title": req.text[:30]}
 
 @app.post("/study/chat")
 async def study_chat(req: StudyRequest):
@@ -624,6 +663,168 @@ async def study_summary(req: StudyRequest):
     result = await agent.finish(req.session_id, req.question, req.branch, user_id=req.user_id or "")
     result["display_markdown"] = render_study_markdown(result)
     return result
+#مجرد اختبار لعدد المستخدمين محدش يهتم بيها خالص
+# ── Admin Endpoints ───────────────────────────────────────────────
+
+@app.get("/admin/stats")
+async def get_admin_stats():
+    """Fetch real platform statistics from Supabase Database."""
+    import httpx
+    
+    # Reload .env dynamically so the user doesn't have to restart the server
+    from dotenv import load_dotenv
+    env_path = os.path.join(os.path.dirname(__file__), ".env")
+    load_dotenv(env_path, override=True)
+    
+    supabase_url = os.getenv("SUPABASE_URL")
+    
+    # We explicitly check for SERVICE_ROLE_KEY to hit the admin API for exact users
+    service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    anon_key = os.getenv("SUPABASE_KEY")
+
+    if not supabase_url or not anon_key:
+        return {"success": False, "error": "Missing Supabase configuration"}
+
+    async with httpx.AsyncClient() as client:
+        try:
+            # Prepare best headers for messages table
+            msg_headers = {
+                "apikey": service_role_key or anon_key,
+                "Authorization": f"Bearer {service_role_key or anon_key}"
+            }
+
+            # 1. Total Messages (queries)
+            msg_req = await client.get(
+                f"{supabase_url}/rest/v1/messages?select=id",
+                headers={**msg_headers, "Prefer": "count=exact,return=minimal"}
+            )
+            
+            # Fallback if service_role_key is invalid/expired
+            if msg_req.status_code in (401, 403) and service_role_key:
+                msg_headers = {
+                    "apikey": anon_key,
+                    "Authorization": f"Bearer {anon_key}"
+                }
+                msg_req = await client.get(
+                    f"{supabase_url}/rest/v1/messages?select=id",
+                    headers={**msg_headers, "Prefer": "count=exact,return=minimal"}
+                )
+            
+            total_messages = 0
+            if "content-range" in msg_req.headers:
+                range_str = msg_req.headers["content-range"]
+                total_messages = int(range_str.split("/")[-1])
+            elif msg_req.status_code == 200:
+                total_messages = len(msg_req.json())
+
+            # 2. Active users from unique user_ids in messages table
+            users_req = await client.get(
+                f"{supabase_url}/rest/v1/messages?select=user_id",
+                headers=msg_headers
+            )
+            
+            active_users = 0
+            unique_users = set()
+            if users_req.status_code == 200:
+                data = users_req.json()
+                for row in data:
+                    uid = row.get("user_id")
+                    if uid:
+                        unique_users.add(uid)
+                active_users = len(unique_users)
+
+            # 3. Exact Total Users from Auth schema (Requires Service Role Key)
+            exact_total_users = active_users
+            recent_users = []
+            chart_labels = []
+            chart_data = []
+            
+            if service_role_key:
+                auth_headers = {
+                    "apikey": service_role_key,
+                    "Authorization": f"Bearer {service_role_key}"
+                }
+                auth_req = await client.get(
+                    f"{supabase_url}/auth/v1/admin/users",
+                    headers=auth_headers
+                )
+                if auth_req.status_code == 200:
+                    auth_data = auth_req.json()
+                    users_list = auth_data.get('users', []) if isinstance(auth_data, dict) else auth_data
+                    exact_total_users = len(users_list)
+                    
+                    # Sort by created_at descending
+                    users_list.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+                    
+                    # Fetch top 5 recent users with real emails
+                    for u in users_list[:5]:
+                        email = u.get("email", "Unknown")
+                        name = email.split('@')[0] if "@" in email else "User"
+                        recent_users.append({
+                            "name": name,
+                            "email": email,
+                            "status": "offline" if u.get("id") not in unique_users else "online"
+                        })
+                        
+                    # Calculate real user growth history (Last 6 Months)
+                    from datetime import datetime, timezone
+                    from collections import defaultdict
+                    
+                    counts_by_my = defaultdict(int)
+                    for u in users_list:
+                        c_at = u.get("created_at")
+                        if c_at:
+                            try:
+                                y_m = c_at[:7] # YYYY-MM
+                                counts_by_my[y_m] += 1
+                            except:
+                                pass
+                                
+                    now = datetime.now(timezone.utc)
+                    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+                    
+                    for i in range(5, -1, -1):
+                        target_month = now.month - i
+                        target_year = now.year
+                        while target_month <= 0:
+                            target_month += 12
+                            target_year -= 1
+                            
+                        y_m = f"{target_year:04d}-{target_month:02d}"
+                        
+                        # Cumulative sum
+                        c_sum = 0
+                        for m_str, count in counts_by_my.items():
+                            if m_str <= y_m:
+                                c_sum += count
+                                
+                        chart_labels.append(months[target_month - 1])
+                        chart_data.append(c_sum)
+            
+            # Formatting fallback for recent users if no service key
+            if not recent_users and unique_users:
+                for u in list(unique_users)[:5]:
+                    short_id = str(u)[:6]
+                    recent_users.append({
+                        "name": f"User_{short_id}", 
+                        "email": f"user_{short_id}@sphinx.com", 
+                        "status": "online"
+                    })
+
+            return {
+                "success": True,
+                "total_users": max(exact_total_users, 1),
+                "active_users": active_users,
+                "total_queries": total_messages,
+                "recent_users": recent_users,
+                "chart": {
+                    "labels": chart_labels,
+                    "data": chart_data
+                }
+            }
+
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
 # ── Main solve endpoints ──────────────────────────────────────────
 
@@ -660,6 +861,13 @@ async def solve_stream(req: QuestionRequest):
 
     messages.append({"role": "user", "content": prompt})
 
+    try:
+        c = await asyncio.to_thread(llm_local.classify, req.question)
+        branch = c.get("branch", "algebra")
+    except Exception as e:
+        logger.warning(f"Classification failed in solve_stream: {e}")
+        branch = "algebra"
+
     async def chunk_generator():
         try:
             if req.image_data:
@@ -674,8 +882,9 @@ async def solve_stream(req: QuestionRequest):
                 enhanced_prompt = f"Image Description (extracted by Vision Scout):\n{image_context}\n\nUser Question:\n{messages[-1]['content']}"
                 messages[-1]["content"] = enhanced_prompt
 
-                # ✅ Memory: stream with user_id
-                async for chunk in llm_local.stream_chat(messages, user_id=req.user_id):
+            if branch == "search" and search_agent is not None:
+                # Use ARIA search agent stream
+                async for chunk in search_agent.stream_search(messages):
                     yield f"data: {json.dumps({'content': chunk})}\n\n"
             else:
                 # ✅ Memory: stream with user_id
@@ -795,7 +1004,8 @@ ALLOWED_FILES = [
     "logo.png",
     "user.png",
     "bg.jpg",
-    "supabaseClient.js"
+    "supabaseClient.js",
+    "admin-dashboard.html"
 ]
 
 @app.get("/")

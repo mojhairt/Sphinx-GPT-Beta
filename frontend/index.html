@@ -59,7 +59,7 @@
             </div>
 
             <div class="sidebar-action">
-                <button class="new-chat-sidebar-btn" onclick="window.location.reload();">
+                <button class="new-chat-sidebar-btn" onclick="window.location.href='/';">
                     <span class="material-symbols-outlined">add</span>
                     <span class="btn-text">New chat</span>
                 </button>
@@ -86,9 +86,9 @@
                     <span class="material-symbols-outlined">dashboard</span>
                     <span class="item-text">Dashboard</span>
                 </a>
-                <a href="V2.0.html" class="sidebar-nav-item">
+                <a href="about.html" class="sidebar-nav-item">
                     <span class="material-symbols-outlined">info</span>
-                    <span class="item-text">Upcoming Features</span>
+                    <span class="item-text">About Us</span>
                 </a>
                 <a href="#" class="sidebar-nav-item">
                     <span class="material-symbols-outlined">settings</span>
@@ -157,6 +157,7 @@
                         <button class="gpt-tab active" data-mode="general">General</button>
                         <button class="gpt-tab" data-mode="think">Deep Think</button>
                         <button class="gpt-tab" data-mode="steps">Steps</button>
+
                     </div>
 
                     <!-- Input Box — MathGPT-style unified container -->
@@ -187,6 +188,14 @@
                                 </div>
                                 <input type="file" id="image-upload-input" accept="image/*,.pdf" style="display:none">
 
+                                <!-- Graph Mode Indicator -->
+                                <div class="graph-mode-badge" id="hero-graph-mode-badge" style="display:none;">
+                                    <span class="material-symbols-outlined" style="font-size:16px;">show_chart</span>
+                                    <span>Graph Mode</span>
+                                    <button class="graph-mode-close" onclick="window.toggleGraphMode()" title="Exit Graph Mode">
+                                        <span class="material-symbols-outlined" style="font-size:14px;">close</span>
+                                    </button>
+                                </div>
                                 <!-- Input field -->
                                 <textarea class="search-input" id="main-search-input"
                                     placeholder="Type your question here…" rows="1"></textarea>
@@ -200,10 +209,10 @@
                                             <span>Symbols</span>
                                         </button>
                                         <button class="tool-pill-btn" id="hero-tool-create-graph"
-                                            onclick="toggleGraphBar()" title="Creat Graph">
+                                            onclick="window.toggleGraphMode()" title="Create Graph">
                                             <span class="material-symbols-outlined dropdown-icon"
-                                                style="font-size: 18px;">grid_view</span>
-                                            <span>Creat Graph</span>
+                                                style="font-size: 18px;">show_chart</span>
+                                            <span>Create Graph</span>
                                         </button>
                                     </div>
 
@@ -242,7 +251,26 @@
                         </div>
                     </div>
 
-                    <p class="hero-disclaimer">Sphinx-GPT can make mistakes. Always verify important calculations.</p>
+                    <div class="suggestion-chips">
+                        <button class="suggestion-chip" data-prompt="Solve x² + 5x + 6 = 0">
+                            <span class="material-symbols-outlined chip-icon">function</span>
+                            <span>Solve x² + 5x + 6 = 0</span>
+                        </button>
+                        <button class="suggestion-chip" data-prompt="Find the derivative of sin(x)·eˣ">
+                            <span class="material-symbols-outlined chip-icon">trending_up</span>
+                            <span>Derivative of sin(x)·eˣ</span>
+                        </button>
+                        <button class="suggestion-chip" data-prompt="Integrate ∫ (1/x) dx from 1 to e">
+                            <span class="material-symbols-outlined chip-icon">calculate</span>
+                            <span>∫ (1/x) dx from 1 to e</span>
+                        </button>
+                        <button class="suggestion-chip" data-prompt="Simplify √(50) + 3√(2)">
+                            <span class="material-symbols-outlined chip-icon">auto_fix_high</span>
+                            <span>Simplify √(50) + 3√(2)</span>
+                        </button>
+                    </div>
+
+                    <p class="hero-disclaimer">Sphinx-SCA can make mistakes. Always verify important calculations.</p>
 
                 </div>
             </main>
@@ -323,6 +351,14 @@
                             </div>
                             <button class="remove-preview-btn" id="chat-remove-preview-btn">×</button>
                         </div>
+                        <!-- Graph Mode Indicator -->
+                        <div class="graph-mode-badge" id="chat-graph-mode-badge" style="display:none;">
+                            <span class="material-symbols-outlined" style="font-size:16px;">show_chart</span>
+                            <span>Graph Mode</span>
+                            <button class="graph-mode-close" onclick="window.toggleGraphMode()" title="Exit Graph Mode">
+                                <span class="material-symbols-outlined" style="font-size:14px;">close</span>
+                            </button>
+                        </div>
                         <textarea class="search-input" id="chat-search-input" placeholder="Ask Sphinx-SCA…"
                             rows="1"></textarea>
                         <div class="search-footer">
@@ -332,10 +368,10 @@
                                         style="font-size: 18px;">functions</span>
                                     <span>Symbols</span>
                                 </button>
-                                <button class="tool-pill-btn" id="tool-create-graph" onclick="toggleGraphBar()"
-                                    title="Tools">
+                                <button class="tool-pill-btn" id="tool-create-graph" onclick="window.toggleGraphMode()"
+                                    title="Create Graph">
                                     <span class="material-symbols-outlined dropdown-icon"
-                                        style="font-size: 18px;">grid_view</span>
+                                        style="font-size: 18px;">show_chart</span>
                                     <span>Create Graph</span>
                                 </button>
                             </div>
@@ -419,17 +455,7 @@
 
 
 
-            <!-- Graph Input Bar (direct plot) -->
-            <div id="graph-input-bar" class="graph-input-bar">
-                <span class="material-symbols-outlined drag-handle">drag_indicator</span>
-                <span class="material-symbols-outlined graph-bar-icon">show_chart</span>
-                <input id="fn-input" type="text" placeholder="e.g. sin(x), x^2 + 3x - 2" class="graph-bar-input">
-                <button onclick="plotFnToChat()" class="graph-bar-plot-btn">Plot</button>
-                <button onclick="document.getElementById('graph-input-bar').style.display='none'"
-                    class="graph-bar-close-btn">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
+            <!-- Graph Input Bar (legacy - now hidden, using inline mode instead) -->
 
             <!-- Coming Soon Modal -->
             <div class="coming-soon-modal-overlay" id="coming-soon-modal">

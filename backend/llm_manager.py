@@ -213,27 +213,28 @@ Input: "{raw_text}"
 
 Return this exact structure:
 {{
-  "branch": "algebra | calculus | geometry | statistics | linear_algebra | word_problem | chat",
-  "problem_type": "solve | simplify | factor | differentiate | integrate | limit | area | perimeter | volume | mean | median | std | determinant | inverse | eigenvalues | multiply | calculate | conversation",
+  "branch": "algebra | calculus | geometry | statistics | linear_algebra | word_problem | search | chat",
+  "problem_type": "solve | simplify | factor | differentiate | integrate | limit | area | perimeter | volume | mean | median | std | determinant | inverse | eigenvalues | multiply | calculate | search | conversation",
   "confidence": 0.0 to 1.0,
   "is_math": true or false
 }}
 
 Rules:
-- chat    : greetings, small talk, questions about the bot, anything NOT math
-- is_math : false for chat, true for all math problems
+- search  : requests for information, news, videos, or real-time details from the web or YouTube
+- chat    : greetings, small talk, questions about the bot, anything NOT math and NOT a search
+- is_math : false for chat and search, true for all math problems
 
 Examples:
 - "hi"                            → {{"branch": "chat",          "problem_type": "conversation", "confidence": 1.0,  "is_math": false}}
-- "how are you?"                  → {{"branch": "chat",          "problem_type": "conversation", "confidence": 1.0,  "is_math": false}}
 - "what can you do?"              → {{"branch": "chat",          "problem_type": "conversation", "confidence": 1.0,  "is_math": false}}
-- "مرحبا"                        → {{"branch": "chat",          "problem_type": "conversation", "confidence": 1.0,  "is_math": false}}
+- "ابحث عن أخبار الذكاء الاصطناعي"   → {{"branch": "search",        "problem_type": "search",       "confidence": 0.98, "is_math": false}}
+- "search for Python tutorials"   → {{"branch": "search",        "problem_type": "search",       "confidence": 0.98, "is_math": false}}
+- "فيديو عن الجبر"                 → {{"branch": "search",        "problem_type": "search",       "confidence": 0.97, "is_math": false}}
+- "what's happening in the world today" → {{"branch": "search",  "problem_type": "search",       "confidence": 0.96, "is_math": false}}
+- "find me videos about calculus" → {{"branch": "search",        "problem_type": "search",       "confidence": 0.99, "is_math": false}}
 - "solve 2x + 5 = 11"            → {{"branch": "algebra",        "problem_type": "solve",        "confidence": 0.98, "is_math": true}}
 - "differentiate x^2 + 3x"       → {{"branch": "calculus",       "problem_type": "differentiate","confidence": 0.97, "is_math": true}}
 - "area of circle with radius 5"  → {{"branch": "geometry",       "problem_type": "area",         "confidence": 0.96, "is_math": true}}
-- "mean of 4, 8, 15, 16"          → {{"branch": "statistics",     "problem_type": "mean",         "confidence": 0.95, "is_math": true}}
-- "determinant of [[1,2],[3,4]]"  → {{"branch": "linear_algebra", "problem_type": "determinant",  "confidence": 0.97, "is_math": true}}
-- "Ahmed has 5 apples, gave 2..." → {{"branch": "word_problem",   "problem_type": "calculate",    "confidence": 0.90, "is_math": true}}
 """
     response = _call_llm(prompt, temperature=0.0)
     result   = _extract_json(response)
@@ -250,7 +251,7 @@ Examples:
         except Exception:
             pass  # keep original result if retry fails
 
-    valid_branches = {"algebra", "calculus", "geometry", "statistics", "linear_algebra", "word_problem", "chat"}
+    valid_branches = {"algebra", "calculus", "geometry", "statistics", "linear_algebra", "word_problem", "search", "chat"}
     if result.get("branch") not in valid_branches:
         result["branch"]  = "algebra"
         result["is_math"] = True

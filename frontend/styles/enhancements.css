@@ -369,13 +369,25 @@
 /* ─── Typing Cursor (streaming) ──────────────────────────────── */
 .typing-cursor {
     display: inline-block;
-    width: 2px;
-    height: 1.1em;
-    margin-left: 2px;
-    background: var(--primary);
-    animation: cursorBlink 1s steps(2, start) infinite;
+    width: 8px;
+    height: 16px;
+    margin-left: 4px;
+    background-color: var(--primary);
+    animation: typingCursorPulse 0.8s cubic-bezier(0.4, 0, 0.6, 1) infinite alternate;
     vertical-align: text-bottom;
-    border-radius: 1px;
+    border-radius: 2px;
+    box-shadow: 0 0 8px rgba(217, 119, 87, 0.6); /* Assuming primary is kind of orange/red based on rgba(217, 119, 87) seen earlier */
+}
+
+@keyframes typingCursorPulse {
+    0% {
+        opacity: 0.2;
+        transform: scaleY(0.7);
+    }
+    100% {
+        opacity: 1;
+        transform: scaleY(1);
+    }
 }
 
 /* ─── Image fade-in animation ────────────────────────────────── */

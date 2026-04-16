@@ -353,107 +353,128 @@ export function initModals() {
     }
 }
 
-// ── Graph (direct plot bar) ───────────────────────────────────
+// ── Graph (inline mode — MathGPT-style) ──────────────────────
 export function initGraph() {
     let graphBubbleCounter = 0;
-    let isDraggableInitialized = false;
 
-    function dragElement(elmnt) {
-        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-        const handle = elmnt.querySelector('.drag-handle');
+    // ── Toggle Graph Mode on/off ──
+    window.toggleGraphMode = function () {
+        appState.graphMode = !appState.graphMode;
 
-        (handle || elmnt).onmousedown = function (e) {
-            e = e || window.event;
-            e.preventDefault();
-            const rect = elmnt.getBoundingClientRect();
-            elmnt.style.top = rect.top + 'px';
-            elmnt.style.left = rect.left + 'px';
-            elmnt.style.transform = 'none';
-            elmnt.style.bottom = 'auto';
-            elmnt.style.margin = '0';
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            document.onmouseup = closeDrag;
-            document.onmousemove = elementDrag;
-        };
+        const heroBadge = document.getElementById('hero-graph-mode-badge');
+        const chatBadge = document.getElementById('chat-graph-mode-badge');
+        const heroBtn = document.getElementById('hero-tool-create-graph');
+        const chatBtn = document.getElementById('tool-create-graph');
+        const mainInput = document.getElementById('main-search-input');
+        const chatInput = document.getElementById('chat-search-input');
 
-        function elementDrag(e) {
-            e.preventDefault();
-            pos1 = pos3 - e.clientX;
-            pos2 = pos4 - e.clientY;
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            const maxX = window.innerWidth - elmnt.offsetWidth;
-            const maxY = window.innerHeight - elmnt.offsetHeight;
-            elmnt.style.left = Math.min(Math.max(elmnt.offsetLeft - pos1, 0), maxX) + 'px';
-            elmnt.style.top = Math.min(Math.max(elmnt.offsetTop - pos2, 0), maxY) + 'px';
-            elmnt.style.transform = 'none';
-            elmnt.style.bottom = 'auto';
-        }
-
-        function closeDrag() {
-            document.onmouseup = null;
-            document.onmousemove = null;
-        }
-    }
-
-    window.toggleGraphBar = function () {
-        const bar = document.getElementById('graph-input-bar');
-        if (!bar) return;
-        if (!isDraggableInitialized) {
-            dragElement(bar);
-            isDraggableInitialized = true;
-        }
-        const isVisible = bar.style.display === 'flex';
-        bar.style.display = isVisible ? 'none' : 'flex';
-        if (!isVisible) {
-            setTimeout(() => {
-                const fnInput = document.getElementById('fn-input');
-                if (fnInput) { fnInput.focus(); fnInput.click(); }
-            }, 100);
+        if (appState.graphMode) {
+            // Activate graph mode
+            if (heroBadge) heroBadge.style.display = 'flex';
+            if (chatBadge) chatBadge.style.display = 'flex';
+            if (heroBtn) heroBtn.classList.add('active');
+            if (chatBtn) chatBtn.classList.add('active');
+            if (mainInput) {
+                mainInput.placeholder = 'Enter equation: e.g. sin(x), x^2 + 3x - 2, cos(x)*exp(-x/5)';
+                mainInput.classList.add('graph-mode-input');
+                mainInput.focus();
+            }
+            if (chatInput) {
+                chatInput.placeholder = 'Enter equation: e.g. sin(x), x^2 + 3x - 2, cos(x)*exp(-x/5)';
+                chatInput.classList.add('graph-mode-input');
+            }
+            // Focus the active input
+            if (appState.isChatActive && chatInput) { chatInput.focus(); }
+            else if (mainInput) { mainInput.focus(); }
+        } else {
+            // Deactivate graph mode
+            if (heroBadge) heroBadge.style.display = 'none';
+            if (chatBadge) chatBadge.style.display = 'none';
+            if (heroBtn) heroBtn.classList.remove('active');
+            if (chatBtn) chatBtn.classList.remove('active');
+            if (mainInput) {
+                mainInput.placeholder = 'Type your question here…';
+                mainInput.classList.remove('graph-mode-input');
+            }
+            if (chatInput) {
+                chatInput.placeholder = 'Ask Sphinx-SCA…';
+                chatInput.classList.remove('graph-mode-input');
+            }
         }
     };
 
-    window.plotFnToChat = function () {
-        const fnInput = document.getElementById('fn-input');
-        const expr = fnInput?.value?.trim();
-        if (!expr) return;
+    // ── Plot a function into the chat ──
+    window.plotFnToChat = function (expr) {
+        if (!expr || !expr.trim()) return;
+        expr = expr.trim();
 
-        document.getElementById('graph-input-bar').style.display = 'none';
-        fnInput.value = '';
-
-        // Transition to chat
+        // Transition to chat if needed
         const heroSection = document.querySelector('.hero');
         const chatInterface = document.getElementById('chat-interface');
         if (heroSection && heroSection.style.display !== 'none') {
-            heroSection.style.display = 'none';
+            heroSection.classList.add('animate-out');
+            setTimeout(() => {
+                heroSection.style.display = 'none';
+                heroSection.classList.remove('animate-out');
+            }, 400);
             if (chatInterface) chatInterface.style.display = 'flex';
             const floatingWrapper = document.getElementById('floating-search-wrapper');
             if (floatingWrapper) floatingWrapper.style.display = 'flex';
             appState.isChatActive = true;
+            document.querySelectorAll('.chat-attach-hide').forEach(el => el.classList.add('chat-attach-btn-hidden'));
         }
 
-        const bubbleId = 'ggb-bubble-' + (++graphBubbleCounter);
+        // Add user message showing the equation
         const chatMessages = document.getElementById('chat-messages');
-        const msgDiv = document.createElement('div');
-        msgDiv.classList.add('message', 'ai-message');
-        msgDiv.innerHTML = `
+        const userDiv = document.createElement('div');
+        userDiv.classList.add('message', 'user-message');
+        userDiv.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: flex-end; width: 100%;">
+                <div class="message-content" style="max-width: 100%;">
+                    <div class="text-body"><span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;margin-right:4px;color:var(--primary);">show_chart</span>Plot: ${expr}</div>
+                </div>
+            </div>
+            <div class="message-avatar">
+                <img src="user.png" alt="User">
+            </div>`;
+        chatMessages.appendChild(userDiv);
+
+        // Add AI message with graph
+        const bubbleId = 'ggb-bubble-' + (++graphBubbleCounter);
+        const aiDiv = document.createElement('div');
+        aiDiv.classList.add('message', 'ai-message');
+        aiDiv.innerHTML = `
             <div class="message-avatar"><img src="logo.png" alt="AI"></div>
-            <div class="message-content" style="max-width:600px; width:100%;">
+            <div class="message-content" style="max-width:640px; width:100%;">
                 <div class="ai-name">Sphinx-SCA</div>
-                <div style="padding:10px 14px; font-size:13px; font-family:monospace; color:#e94560;">📈 f(x) = ${expr}</div>
-                <div style="border-radius:12px; overflow:hidden; border:1px solid #e0e0e0; background:#ffffff;">
+                <div class="graph-equation-label">
+                    <span class="material-symbols-outlined" style="font-size:18px;">show_chart</span>
+                    <span>f(x) = ${expr}</span>
+                </div>
+                <div class="graph-container-wrapper">
+                    <div class="graph-loading" id="${bubbleId}-loading">
+                        <div class="graph-loading-spinner"></div>
+                        <span>Loading graph...</span>
+                    </div>
                     <div id="${bubbleId}" style="width:100%; height:420px;"></div>
                 </div>
+                <div class="message-actions">
+                    <button class="action-btn" data-action="copy" title="Copy equation" onclick="navigator.clipboard.writeText('${expr.replace(/'/g, "\\'")}')">
+                        <span class="material-symbols-outlined">content_copy</span>
+                    </button>
+                </div>
             </div>`;
-        chatMessages.appendChild(msgDiv);
+        chatMessages.appendChild(aiDiv);
 
-        const scrollWrapper = document.getElementById('chat-interface');
-        if (scrollWrapper) scrollWrapper.scrollTop = scrollWrapper.scrollHeight;
+        // Scroll to bottom
+        if (chatInterface) chatInterface.scrollTop = chatInterface.scrollHeight;
 
+        // Load and render GeoGebra
         setTimeout(() => {
             const container = document.getElementById(bubbleId);
+            const loadingEl = document.getElementById(bubbleId + '-loading');
             if (!container) return;
+
             const appletParams = {
                 appName: 'graphing',
                 width: container.offsetWidth || 560,
@@ -462,7 +483,11 @@ export function initGraph() {
                 showAlgebraInput: true,
                 showMenuBar: false,
                 enableRightClick: false,
-                appletOnLoad: (api) => api.evalCommand('f(x) = ' + expr),
+                scaleContainerClass: 'graph-container-wrapper',
+                appletOnLoad: (api) => {
+                    api.evalCommand('f(x) = ' + expr);
+                    if (loadingEl) loadingEl.style.display = 'none';
+                },
             };
 
             if (typeof GGBApplet !== 'undefined') {
@@ -472,10 +497,19 @@ export function initGraph() {
                 script.src = 'https://www.geogebra.org/apps/deployggb.js';
                 script.onload = () => new GGBApplet(appletParams, true).inject(bubbleId);
                 script.onerror = () => {
-                    container.innerHTML = '<div style="padding:20px;color:red;">Failed to load Graphing engine.</div>';
+                    if (loadingEl) loadingEl.style.display = 'none';
+                    container.innerHTML = `
+                        <div style="padding:30px;text-align:center;color:var(--text-muted);">
+                            <span class="material-symbols-outlined" style="font-size:48px;display:block;margin-bottom:12px;opacity:0.5;">error_outline</span>
+                            <p>Failed to load graphing engine.</p>
+                            <p style="font-size:12px;margin-top:8px;">Please check your internet connection.</p>
+                        </div>`;
                 };
                 document.head.appendChild(script);
             }
         }, 300);
     };
+
+    // Keep legacy toggleGraphBar for backward compat
+    window.toggleGraphBar = window.toggleGraphMode;
 }

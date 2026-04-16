@@ -11,8 +11,8 @@
     --primary-hover: #c4654a;
     --primary-light: rgba(217, 119, 87, 0.12);
     --primary-glow: rgba(217, 119, 87, 0.25);
+    --primary-glow-strong: rgba(217, 119, 87, 0.40);
     --accent-color: #d97757;
-    /* Restored to Orange */
     --accent-color-hover: #c4654a;
 
     /* Backgrounds */
@@ -29,7 +29,6 @@
 
     /* Borders & Surfaces */
     --border-color: rgba(0, 0, 0, 0.12);
-    /* Strengthened for visibility */
     --border-hover: rgba(0, 0, 0, 0.2);
     --surface-hover: rgba(0, 0, 0, 0.06);
     --surface-active: rgba(0, 0, 0, 0.08);
@@ -39,6 +38,10 @@
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.08);
     --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.1);
+
+    /* Glow Effects */
+    --glow-input: 0 0 0 3px rgba(217, 119, 87, 0.15), 0 8px 32px rgba(217, 119, 87, 0.10);
+    --glow-btn: 0 4px 20px rgba(217, 119, 87, 0.35);
 
     /* Spacing (4px grid) */
     --space-1: 4px;
@@ -96,25 +99,28 @@
 
 /* ─── Dark Theme ─── */
 .dark-theme {
-    --bg-primary: #0f0f0f;
-    --bg-secondary: #1a1a1a;
-    --bg-tertiary: #2b2b2b;
-    --bg-elevated: #1e1e1e;
+    --bg-primary: #0a0a0f;
+    --bg-secondary: #131318;
+    --bg-tertiary: #1e1e26;
+    --bg-elevated: #18181f;
 
-    --text-primary: #e5e5e5;
-    --text-secondary: #a3a3a3;
-    --text-muted: #737373;
+    --text-primary: #e8e8ed;
+    --text-secondary: #a3a3ae;
+    --text-muted: #6b6b78;
     --text-inverse: #111111;
 
-    --border-color: rgba(255, 255, 255, 0.1);
-    --border-hover: rgba(255, 255, 255, 0.15);
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-hover: rgba(255, 255, 255, 0.14);
     --surface-hover: rgba(255, 255, 255, 0.06);
     --surface-active: rgba(255, 255, 255, 0.08);
 
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.4);
-    --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.5);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
+
+    --glow-input: 0 0 0 3px rgba(217, 119, 87, 0.12), 0 8px 32px rgba(217, 119, 87, 0.08);
+    --glow-btn: 0 4px 24px rgba(217, 119, 87, 0.45);
 
     --user-msg-bg: var(--primary);
     --user-msg-text: #ffffff;
@@ -281,6 +287,54 @@ ol {
     }
 }
 
+@keyframes logoGlow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 20px rgba(217, 119, 87, 0.15), 0 0 40px rgba(217, 119, 87, 0.05);
+    }
+
+    50% {
+        box-shadow: 0 0 28px rgba(217, 119, 87, 0.25), 0 0 56px rgba(217, 119, 87, 0.10);
+    }
+}
+
+@keyframes subtlePulse {
+
+    0%,
+    100% {
+        box-shadow: 0 4px 12px var(--primary-glow);
+    }
+
+    50% {
+        box-shadow: 0 4px 20px var(--primary-glow-strong);
+    }
+}
+
+@keyframes borderGlow {
+
+    0%,
+    100% {
+        border-color: rgba(217, 119, 87, 0.20);
+    }
+
+    50% {
+        border-color: rgba(217, 119, 87, 0.40);
+    }
+}
+
+@keyframes messageEntry {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* ============================================================
    APP LAYOUT (Index / Chat Page)
    ============================================================ */
@@ -307,6 +361,29 @@ body.app-page {
     background-color: var(--bg-primary);
     position: relative;
     transition: background-color var(--transition-base);
+}
+
+/* Atmospheric background gradient (dark theme only) */
+.dark-theme .main-content-wrapper {
+    background:
+        radial-gradient(ellipse 80% 60% at 50% 0%, rgba(217, 119, 87, 0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 100%, rgba(139, 92, 246, 0.04) 0%, transparent 50%),
+        var(--bg-primary);
+}
+
+/* Subtle grid pattern overlay */
+.dark-theme .main-content-wrapper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+    mask-image: radial-gradient(ellipse 70% 50% at 50% 40%, black 20%, transparent 70%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 50% at 50% 40%, black 20%, transparent 70%);
 }
 
 /* ============================================================
@@ -612,6 +689,14 @@ body.app-page {
     transition: background-color var(--transition-base), border-color var(--transition-base);
 }
 
+/* Glassmorphic header in dark mode */
+.dark-theme .header {
+    background-color: rgba(10, 10, 15, 0.75);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 .logo-container {
     display: flex;
     align-items: center;
@@ -691,13 +776,15 @@ body.app-page {
     display: flex;
     align-items: center;
     gap: 8px;
+    animation: subtlePulse 3s ease-in-out infinite;
 }
 
 .study-mode-header-btn:hover {
     background: var(--primary-hover);
     border-color: var(--primary-hover);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px var(--primary-glow);
+    box-shadow: 0 4px 20px var(--primary-glow-strong);
+    animation: none;
 }
 
 
@@ -835,12 +922,12 @@ body.app-page {
 }
 
 .dropdown-item.logout {
-    color: #ef4444;
+    color: #d97757;
 }
 
 .dropdown-item.logout:hover {
     background-color: rgba(239, 68, 68, 0.06);
-    color: #dc2626;
+    color: #d97757;
 }
 
 .dropdown-divider {
@@ -859,10 +946,12 @@ body.app-page {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 20px 40px;
+    padding: 12px 40px 16px;
     text-align: left;
     transition: opacity var(--transition-slow), transform var(--transition-slow);
     overflow-y: auto;
+    position: relative;
+    z-index: 1;
 }
 
 .hero.animate-out {
@@ -887,7 +976,7 @@ body.app-page {
     display: flex;
     flex-direction: column;
     align-items: center;
-    animation: fadeInUp 0.8s var(--transition-slow) forwards;
+    animation: fadeInUp 0.7s ease forwards;
 }
 
 /* Hide old decorative elements */
@@ -910,8 +999,8 @@ body.app-page {
     align-items: center;
     text-align: center;
     width: 100%;
-    margin-top: var(--space-2);
-    margin-bottom: var(--space-4);
+    margin-top: 0;
+    margin-bottom: var(--space-3);
 }
 
 .hero-logo-circle {
@@ -919,73 +1008,113 @@ body.app-page {
     align-items: center;
     justify-content: center;
     margin-bottom: var(--space-4);
+    border-radius: var(--radius-full);
+    width: 88px;
+    height: 88px;
+    background: radial-gradient(circle, rgba(217, 119, 87, 0.08) 0%, rgba(217, 119, 87, 0.02) 60%, transparent 100%);
+    border: 1.5px solid rgba(217, 119, 87, 0.20);
+    animation: logoGlow 4s ease-in-out infinite;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+/* Inner subtle ring for depth */
+.hero-logo-circle::after {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border-radius: var(--radius-full);
+    border: 1px solid rgba(217, 119, 87, 0.08);
+    pointer-events: none;
+}
+
+.dark-theme .hero-logo-circle {
+    background: radial-gradient(circle, rgba(217, 119, 87, 0.12) 0%, rgba(217, 119, 87, 0.04) 55%, transparent 100%);
+    border-color: rgba(217, 119, 87, 0.22);
+}
+
+.hero-logo-circle:hover {
+    animation: none;
+    box-shadow: 0 0 40px rgba(217, 119, 87, 0.30), 0 0 80px rgba(217, 119, 87, 0.10);
+    border-color: rgba(217, 119, 87, 0.40);
+    transform: scale(1.06);
 }
 
 .hero-logo-img {
-    width: 54px;
-    height: 54px;
+    width: 80px;
+    height: 80px;
     object-fit: contain;
+    filter: drop-shadow(0 2px 12px rgba(217, 119, 87, 0.25));
+    transition: filter 0.3s ease;
+}
+
+.hero-logo-circle:hover .hero-logo-img {
+    filter: drop-shadow(0 4px 16px rgba(217, 119, 87, 0.40));
 }
 
 .hero-title {
-    font-size: 32px !important;
-    font-weight: 500 !important;
-    color: var(--text-primary) !important;
-    background: none !important;
-    -webkit-text-fill-color: initial !important;
-    margin-bottom: var(--space-2) !important;
+    font-size: 34px !important;
+    font-weight: 600 !important;
     letter-spacing: -0.5px !important;
-    animation: none !important;
+    margin-bottom: var(--space-2) !important;
+    color: var(--text-primary) !important;
+    animation: fadeInUp 0.7s ease 0.1s both !important;
 }
 
 .hero-subtitle {
-    font-size: 18px !important;
+    font-size: 17px !important;
     font-weight: 400 !important;
     color: var(--text-secondary) !important;
     margin-bottom: 0 !important;
-    letter-spacing: -0.3px;
-    line-height: 1.3;
-    animation: fadeInUp 0.8s ease 0.15s both;
+    letter-spacing: -0.2px;
+    line-height: 1.4;
+    animation: fadeInUp 0.7s ease 0.18s both;
     margin-top: 4px !important;
+    opacity: 0.85;
 }
 
 .gpt-tabs {
     display: flex;
     gap: var(--space-2);
-    margin-bottom: var(--space-4);
+    margin-bottom: var(--space-3);
     justify-content: center;
     width: 100%;
-    animation: fadeInUp 0.8s ease 0.2s both;
+    animation: fadeInUp 0.7s ease 0.22s both;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-full);
+    padding: 4px;
+    width: fit-content;
 }
 
 .gpt-tab {
-    padding: 8px 20px;
+    padding: 8px 22px;
     border-radius: var(--radius-full);
-    border: 1px solid var(--border-color);
-    background: var(--bg-secondary);
+    border: none;
+    background: transparent;
     color: var(--text-secondary);
     font-size: 14px;
     font-weight: 500;
-    transition: all var(--transition-fast);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
 }
 
 .gpt-tab:hover {
-    background: var(--surface-hover);
-    border-color: var(--border-hover);
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.06);
 }
 
 .gpt-tab.active {
     background: var(--primary);
     color: white;
-    border-color: var(--primary);
-    box-shadow: 0 4px 12px var(--primary-glow);
+    box-shadow: 0 4px 16px var(--primary-glow), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    transform: scale(1.02);
 }
 
 /* Hero Search Wrapper (Gemini: input centered in hero) */
 .hero-search-wrapper {
     width: 100%;
     margin-bottom: var(--space-2);
-    animation: fadeInUp 0.8s ease 0.25s both;
+    animation: fadeInUp 0.7s ease 0.26s both;
 }
 
 .hero-search-wrapper .search-container {
@@ -1033,38 +1162,70 @@ body.app-page {
 .suggestion-chips {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-3);
-    justify-content: flex-start;
-    max-width: 680px;
-    animation: fadeInUp 0.8s ease 0.35s both;
+    gap: var(--space-2);
+    justify-content: center;
+    max-width: 720px;
+    margin-top: var(--space-3);
+    animation: fadeInUp 0.7s ease 0.38s both;
 }
 
 .suggestion-chip {
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    padding: var(--space-3) var(--space-5);
+    padding: 10px 18px;
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-full);
+    border-radius: var(--radius-xl);
     font-size: var(--font-small);
     font-weight: 500;
     color: var(--text-secondary);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     white-space: nowrap;
+    position: relative;
+    overflow: hidden;
+}
+
+.dark-theme .suggestion-chip {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.suggestion-chip::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(217, 119, 87, 0.08), transparent);
+    opacity: 0;
+    transition: opacity 0.2s ease;
 }
 
 .suggestion-chip:hover {
-    background-color: var(--surface-hover);
-    border-color: var(--border-hover);
+    border-color: rgba(217, 119, 87, 0.3);
     color: var(--text-primary);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-sm);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(217, 119, 87, 0.12);
+}
+
+.suggestion-chip:hover::before {
+    opacity: 1;
+}
+
+.suggestion-chip:active {
+    transform: translateY(0) scale(0.98);
 }
 
 .suggestion-chip .chip-icon {
     font-size: 16px;
+    color: var(--primary);
+    position: relative;
+    z-index: 1;
+}
+
+.suggestion-chip span:not(.chip-icon) {
+    position: relative;
+    z-index: 1;
 }
 
 /* ============================================================
@@ -1173,8 +1334,8 @@ body.app-page {
     padding: 0 16px;
     height: 34px;
     border-radius: var(--radius-full);
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--surface-hover);
+    border: 1px solid var(--border-color);
     color: var(--text-secondary);
     font-size: 13px;
     font-weight: 500;
@@ -1183,8 +1344,8 @@ body.app-page {
 }
 
 .tool-pill-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: var(--surface-active);
+    border-color: var(--border-hover);
     color: var(--text-primary);
 }
 
@@ -1224,8 +1385,8 @@ body.app-page {
     gap: 6px;
     padding: 6px 16px;
     border-radius: var(--radius-full);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    background: var(--surface-hover);
     color: var(--text-secondary);
     font-size: 13px;
     font-weight: 500;
@@ -1235,9 +1396,9 @@ body.app-page {
 
 .tool-pill-btn:hover,
 .math-mode-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--surface-active);
     color: var(--text-primary);
-    border-color: rgba(255, 255, 255, 0.2);
+    border-color: var(--border-hover);
 }
 
 .icon-button {
@@ -1434,6 +1595,7 @@ body.app-page {
     flex-direction: column;
     position: relative;
     pointer-events: auto;
+    transition: transform var(--transition-base);
 }
 
 .drop-zone {
@@ -1461,15 +1623,31 @@ body.app-page {
 .input-content {
     background: var(--bg-secondary);
     color: var(--text-primary);
-    padding: 12px 16px;
+    padding: 14px 18px;
     display: flex;
     flex-direction: column;
     border: 1px solid rgba(128, 128, 128, 0.2);
-    border-radius: 16px;
-    box-shadow: none;
+    border-radius: 18px;
+    box-shadow: var(--shadow-lg);
     position: relative;
     z-index: 2;
-    /* Sits over the dashed border bottom */
+    transition: box-shadow var(--transition-base), border-color var(--transition-base);
+}
+
+.input-content:focus-within {
+    border-color: rgba(217, 119, 87, 0.35);
+    box-shadow: var(--glow-input);
+}
+
+.dark-theme .input-content {
+    background: rgba(19, 19, 24, 0.85);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.dark-theme .input-content:focus-within {
+    border-color: rgba(217, 119, 87, 0.30);
+    box-shadow: var(--glow-input), 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 .search-input {
@@ -1519,13 +1697,18 @@ body.app-page {
     border: none;
     cursor: pointer;
     color: white;
-    transition: all var(--transition-base);
-    box-shadow: 0 4px 12px rgba(217, 119, 87, 0.35);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--glow-btn);
 }
 
 .send-btn:hover {
     background-color: var(--accent-color-hover) !important;
-    transform: scale(1.05);
+    transform: scale(1.08);
+    box-shadow: 0 6px 28px rgba(217, 119, 87, 0.50);
+}
+
+.send-btn:active {
+    transform: scale(0.95);
 }
 
 .math-mode-btn,
@@ -1548,18 +1731,14 @@ body.app-page {
     box-shadow: var(--shadow-md);
 }
 
-/* Fix Hero Contrast */
-.hero-subtitle {
-    color: var(--text-secondary);
-    opacity: 0.8;
-}
+/* Hero Subtitle contrast inherited from main hero-subtitle rule */
 
 .mode-dropdown-btn {
     height: 34px;
     padding: 0 16px;
     border-radius: var(--radius-full);
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--surface-hover);
+    border: 1px solid var(--border-color);
     color: var(--text-secondary);
     font-size: 13px;
     font-weight: 500;
@@ -1571,8 +1750,8 @@ body.app-page {
 }
 
 .mode-dropdown-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: var(--surface-active);
+    border-color: var(--border-hover);
     color: var(--text-primary);
 }
 
@@ -1680,14 +1859,14 @@ body.app-page {
     height: 32px;
     padding: 0 12px;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--surface-hover);
+    border: 1px solid var(--border-color);
     font-size: 14px;
 }
 
 .math-mode-btn:hover,
 .tools-dropdown-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--surface-active);
 }
 
 .icon-button {
@@ -2759,12 +2938,14 @@ body.app-page {
     }
 
     .hero-logo-circle {
-        margin-bottom: 10px;
+        margin-bottom: 8px;
+        width: 60px;
+        height: 60px;
     }
 
     .hero-logo-img {
-        width: 42px;
-        height: 42px;
+        width: 54px;
+        height: 54px;
     }
 
     .hero-title {
@@ -2784,13 +2965,14 @@ body.app-page {
 
     /* ─── Mode Tabs: Compact Pills ─── */
     .gpt-tabs {
-        gap: 6px;
-        margin-bottom: 16px;
+        gap: 4px;
+        margin-bottom: 12px;
         justify-content: center;
+        padding: 3px;
     }
 
     .gpt-tab {
-        padding: 6px 16px;
+        padding: 6px 14px;
         font-size: 13px;
         font-weight: 500;
         border-radius: var(--radius-full);
@@ -2808,6 +2990,28 @@ body.app-page {
 
     .hero-search-wrapper .search-footer {
         padding: 0;
+    }
+
+    /* ─── Suggestion Chips: Scrollable row ─── */
+    .suggestion-chips {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+        gap: 6px;
+        justify-content: flex-start;
+        padding: 0 4px 4px;
+        margin-top: 8px;
+        max-width: 100%;
+    }
+
+    .suggestion-chips::-webkit-scrollbar {
+        display: none;
+    }
+
+    .suggestion-chip {
+        padding: 8px 14px;
+        font-size: 12px;
+        flex-shrink: 0;
     }
 
     /* ─── Drop Zone: Visible upload area ─── */
@@ -2865,22 +3069,14 @@ body.app-page {
         gap: 4px;
     }
 
-    /* Tool & Mode buttons: Icon-only, compact */
-    .mode-dropdown-btn span:not(.dropdown-icon),
-    .math-mode-btn span:not(.dropdown-icon),
-    .tool-pill-btn span:not(.dropdown-icon),
-    .tools-dropdown-btn span:not(.dropdown-icon) {
-        display: none !important;
-    }
-
+    /* Tool & Mode buttons: Compact Pills Instead of Circles */
     .tool-pill-btn,
     .math-mode-btn,
-    .tools-dropdown-btn {
-        padding: 0;
-        width: 32px;
-        height: 32px;
-        min-width: 32px;
-        min-height: 32px;
+    .tools-dropdown-btn,
+    .mode-dropdown-btn {
+        padding: 4px 10px;
+        height: 30px;
+        min-height: 30px;
         border-radius: var(--radius-full);
         display: flex;
         align-items: center;
@@ -2888,45 +3084,20 @@ body.app-page {
         color: var(--text-secondary);
         border: 1px solid var(--border-color);
         background: var(--bg-tertiary);
+        font-size: 12px;
+        gap: 4px;
+        width: auto;
     }
 
-    .tool-pill-btn .dropdown-icon,
-    .math-mode-btn .dropdown-icon,
-    .tools-dropdown-btn .dropdown-icon {
-        display: flex !important;
-        font-size: 16px !important;
-    }
-
-    /* Mode dropdown button */
-    .mode-dropdown-btn {
-        padding: 0;
-        width: 32px;
-        height: 32px;
-        min-width: 32px;
-        min-height: 32px;
-        border-radius: var(--radius-full);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0;
-    }
-
+    .tool-pill-btn .material-symbols-outlined,
+    .math-mode-btn .material-symbols-outlined,
+    .tools-dropdown-btn .material-symbols-outlined,
     .mode-dropdown-btn .dropdown-icon {
-        display: flex !important;
-        font-size: 16px !important;
+        font-size: 14px !important;
     }
 
-    .mode-dropdown-btn .material-symbols-outlined {
-        font-size: 16px !important;
-    }
-
-    .mode-dropdown-btn .material-symbols-outlined:last-child {
-        display: none !important;
-    }
-
-    .mode-dropdown-btn .dropdown-text {
-        display: none !important;
-    }
+    /* Cleanup redundant mode-dropdown-btn rules */
+    /* (The above block now handles .mode-dropdown-btn style properly) */
 
     /* Send button: Clean & Proportional */
     .send-btn {
@@ -3169,9 +3340,14 @@ body.app-page {
         padding: 12px 12px 8px;
     }
 
+    .hero-logo-circle {
+        width: 52px;
+        height: 52px;
+    }
+
     .hero-logo-img {
-        width: 36px;
-        height: 36px;
+        width: 46px;
+        height: 46px;
     }
 }
 
@@ -3180,7 +3356,7 @@ body.app-page {
    ============================================================ */
 
 body.dashboard-page {
-    background-color: #0D0D0D;
+    background-color: var(--bg-primary);
     /* Precise dark theme bg */
     color: var(--text-primary);
     font-family: var(--font-main);
@@ -3362,23 +3538,24 @@ body.dashboard-page {
 
 .typing-cursor {
     display: inline-block;
-    width: 10px;
-    margin-left: 2px;
-    color: var(--text-muted);
-    animation: cursorBlink 1s steps(2, start) infinite;
-    vertical-align: baseline;
+    width: 8px;
+    height: 16px;
+    margin-left: 4px;
+    background-color: var(--primary);
+    animation: typingCursorPulse 0.8s cubic-bezier(0.4, 0, 0.6, 1) infinite alternate;
+    vertical-align: text-bottom;
+    border-radius: 2px;
+    box-shadow: 0 0 8px rgba(217, 119, 87, 0.6);
 }
 
-@keyframes cursorBlink {
-
-    0%,
-    49% {
-        opacity: 1;
+@keyframes typingCursorPulse {
+    0% {
+        opacity: 0.2;
+        transform: scaleY(0.7);
     }
-
-    50%,
     100% {
-        opacity: 0;
+        opacity: 1;
+        transform: scaleY(1);
     }
 }
 
@@ -3794,105 +3971,150 @@ body.dashboard-page {
 }
 
 /* ============================================================
-   GRAPH INPUT BAR (DIRECT PLOT)
+   GRAPH MODE (INLINE — MathGPT-style)
    ============================================================ */
 
-.graph-input-bar {
+/* Graph Mode Badge — shown above the input when graph mode is active */
+.graph-mode-badge {
     display: none;
     align-items: center;
     gap: 8px;
-    /* Slightly reduced gap */
-    padding: 10px 16px;
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-color);
-    position: fixed;
-    bottom: 90px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: min(650px, 94vw);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-xl), 0 8px 32px rgba(0, 0, 0, 0.2);
-    z-index: 1000;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    transition: box-shadow var(--transition-base), transform 0.1s ease;
-}
-
-.drag-handle {
-    cursor: grab;
-    color: var(--text-muted);
-    user-select: none;
-    padding: 4px;
-    margin-right: -4px;
-    opacity: 0.6;
-    transition: all var(--transition-fast);
-}
-
-.drag-handle:hover {
-    opacity: 1;
-    color: var(--primary);
-}
-
-.drag-handle:active {
-    cursor: grabbing;
-}
-
-.graph-bar-icon {
-    color: var(--primary);
-    font-size: 24px;
-}
-
-.graph-bar-input {
-    flex: 1;
-    border: 1px solid var(--border-color);
+    padding: 6px 12px;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, rgba(233, 69, 96, 0.08), rgba(233, 69, 96, 0.04));
+    border: 1px solid rgba(233, 69, 96, 0.2);
     border-radius: var(--radius-md);
-    padding: 10px 16px;
-    font-size: var(--font-body);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    outline: none;
-    transition: border-color var(--transition-fast);
-}
-
-.graph-bar-input:focus {
-    border-color: var(--primary);
-}
-
-.graph-bar-plot-btn {
-    background: var(--primary);
-    color: #ffffff;
-    border: none;
-    border-radius: var(--radius-md);
-    padding: 10px 24px;
-    font-size: 14px;
-    cursor: pointer;
+    color: var(--primary);
+    font-size: 13px;
     font-weight: 600;
-    transition: all var(--transition-fast);
+    animation: graphBadgeIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.graph-bar-plot-btn:hover {
-    background: var(--primary-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px var(--primary-glow);
+@keyframes graphBadgeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
-.graph-bar-close-btn {
-    background: transparent;
-    border: none;
+.graph-mode-badge .material-symbols-outlined {
+    color: var(--primary);
+}
+
+.graph-mode-close {
     cursor: pointer;
+    border: none;
+    background: transparent;
     color: var(--text-muted);
+    padding: 2px;
+    margin-left: auto;
+    border-radius: var(--radius-full);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 4px;
-    border-radius: var(--radius-full);
     transition: all var(--transition-fast);
 }
 
-.graph-bar-close-btn:hover {
-    background: var(--surface-hover);
-    color: var(--text-primary);
+.graph-mode-close:hover {
+    background: rgba(233, 69, 96, 0.12);
+    color: var(--primary);
+}
+
+/* Input field glow in graph mode */
+.graph-mode-input {
+    border-color: rgba(233, 69, 96, 0.3) !important;
+    box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.06) !important;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace !important;
+}
+
+.graph-mode-input::placeholder {
+    color: rgba(233, 69, 96, 0.4) !important;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace !important;
+}
+
+/* Active state for Create Graph button */
+.tool-pill-btn.active {
+    background: rgba(233, 69, 96, 0.12) !important;
+    border-color: rgba(233, 69, 96, 0.3) !important;
+    color: var(--primary) !important;
+}
+
+.tool-pill-btn.active .material-symbols-outlined {
+    color: var(--primary) !important;
+}
+
+/* Graph equation label in chat */
+.graph-equation-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    color: var(--primary);
+    font-weight: 600;
+    background: linear-gradient(135deg, rgba(233, 69, 96, 0.06), rgba(233, 69, 96, 0.02));
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    border-bottom: 1px solid rgba(233, 69, 96, 0.1);
+}
+
+.graph-equation-label .material-symbols-outlined {
+    color: var(--primary);
+    opacity: 0.8;
+}
+
+/* Graph container */
+.graph-container-wrapper {
+    position: relative;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    border-top: none;
+    background: #ffffff;
+}
+
+.dark-theme .graph-container-wrapper {
+    background: #f8f8f8;
+}
+
+/* Graph loading spinner */
+.graph-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.95);
+    z-index: 10;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.dark-theme .graph-loading {
+    background: rgba(248, 248, 248, 0.95);
+    color: #666;
+}
+
+.graph-loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(233, 69, 96, 0.15);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+}
+
+/* Unified input card border color change in graph mode */
+.unified-input-card:has(.graph-mode-input) {
+    border-color: rgba(233, 69, 96, 0.25) !important;
+    box-shadow: 0 0 20px rgba(233, 69, 96, 0.06), var(--shadow-lg) !important;
 }
 
 /* ============================================================
@@ -3916,5 +4138,3 @@ body.dashboard-page {
 .chat-attach-btn-hidden {
     display: none !important;
 }
-
-/* Calculator & Tools mobile overrides already handled in main 768px block */

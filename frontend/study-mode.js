@@ -13,6 +13,33 @@ import { supabase } from './supabaseClient.js';
 import { initMarkdown, formatMessage } from './lib/markdown.js';
 import { initCalculator, initMathToolbar, initGraph } from './lib/ui.js';
 
+// ── Search Sources Renderer ──────────────────────────────────
+function renderSearchSources(msgDiv, data) {
+    if (!msgDiv || !data || !data.sources || data.sources.length === 0) return;
+    const isYT = data.mode === 'YOUTUBE_SEARCH';
+    const iconName = isYT ? 'smart_display' : 'public';
+    let html = '<div class="search-sources-container" style="margin-top:16px;border-top:1px solid var(--border-color, #333);padding-top:12px;">';
+    html += `<div style="font-size:12px;color:var(--text-secondary, #888);margin-bottom:10px;display:flex;align-items:center;gap:5px;"><span class="material-symbols-outlined" style="font-size:16px;">${iconName}</span>Sources</div>`;
+    html += '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
+    data.sources.forEach(src => {
+        let domain = '';
+        try { domain = new URL(src.url).hostname.replace('www.', ''); } catch(e){}
+        html += `<a href="${src.url}" target="_blank" rel="noopener" style="display:flex;flex-direction:column;padding:8px 12px;background:var(--bg-secondary, #1a1a2e);border:1px solid var(--border-color, #333);border-radius:8px;text-decoration:none;max-width:200px;transition:all 0.2s;cursor:pointer;" onmouseover="this.style.borderColor='var(--primary, #e94560)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--border-color, #333)';this.style.transform=''"><span style="font-size:13px;color:var(--text-primary, #eee);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${src.title}</span><span style="font-size:11px;color:var(--text-secondary, #888);">${domain}</span></a>`;
+    });
+    html += '</div></div>';
+    const contentDiv = msgDiv.querySelector('.message-content');
+    if (contentDiv) {
+        const existing = contentDiv.querySelector('.search-sources-container');
+        if (existing) existing.outerHTML = html;
+        else {
+            const textBody = contentDiv.querySelector('.text-body');
+            if (textBody) textBody.insertAdjacentHTML('afterend', html);
+            else contentDiv.innerHTML += html;
+        }
+    }
+}
+window.renderSearchSources = renderSearchSources;
+
 // ── State ─────────────────────────────────────────────────────
 const state = {
     timerMode: 'work',
@@ -46,23 +73,34 @@ const state = {
     studyHintsUsed: 0,
     studyDifficulty: "medium",
     studyProblemsSolved: 0,
-    studyStreak: 0
+    studyStreak: 0,
+    graphMode: false
 };
 
 const $ = (id) => document.getElementById(id);
 
 // ══════════════════════════════════════════════════════════════
-// FIX 1: UNIVERSAL CONTENT EXTRACTOR
-// Backend returns different keys per endpoint — map them all here
+// UNIVERSAL CONTENT EXTRACTOR
+// Backend returns different keys per endpoint — map them all here.
+//
+// ROOT FIX: agent_message is now FIRST in the priority list.
+// The v7 agent loop always produces agent_message as its final
+// text response. All previous fixes were missing this key, which
+// caused the "Session updated." fallback to appear whenever the
+// LLM wrote a final response (the most common case).
 // ══════════════════════════════════════════════════════════════
 function extractContent(data) {
     if (!data || typeof data !== 'object') return '';
 
-    // Priority order: explicit display field → specific content fields → fallback
+    // Priority order:
+    // 1. agent_message  — v7 agent final text response (THE fix)
+    // 2. display_markdown — fast paths (chat, explain, help)
+    // 3. specific tool result fields — fallback if agent_message absent
     return (
+        data.agent_message ||   // v7 agent loop final response ← ROOT FIX
         data.display_markdown ||   // fast paths (chat, explain, help)
-        data.concept_explanation ||   // /study/start → explain node
-        data.socratic_question ||   // /study/start → socratic node
+        data.concept_explanation ||   // /study/start → explain tool
+        data.socratic_question ||   // /study/start → socratic tool
         data.solve_output ||   // /study/solve
         data.hint_text ||   // /study/hint
         data.mistake_feedback ||   // /study/check (wrong answer)
@@ -73,8 +111,14 @@ function extractContent(data) {
     );
 }
 
-// Combine multiple fields when a response has more than one meaningful piece
+// Combine multiple fields when a response has more than one meaningful piece.
+// agent_message already contains the combined final response from the agent,
+// so we check it first and skip the multi-field join if it exists.
 function extractStartContent(data) {
+    // If the agent wrote a final message, use it directly — it already
+    // combines concept explanation + socratic question in one response.
+    if (data.agent_message) return data.agent_message;
+
     const parts = [];
     if (data.concept_explanation) parts.push(data.concept_explanation);
     if (data.socratic_question) parts.push(data.socratic_question);
@@ -83,11 +127,40 @@ function extractStartContent(data) {
 }
 
 function extractCheckContent(data) {
+    // If the agent wrote a final message, use it directly — it already
+    // combines feedback + socratic question / practice problem.
+    if (data.agent_message) return data.agent_message;
+
     const parts = [];
     if (data.mistake_feedback) parts.push(data.mistake_feedback);
     if (data.socratic_question) parts.push(data.socratic_question);
     if (data.practice_problem) parts.push(data.practice_problem);
     return parts.join('\n\n') || extractContent(data);
+}
+
+//khairy update from 113 to 133 and 175 to 184
+//(اضافة خاصية محادثات مود المذاكرة + خاصية الملاحظات والتاسكات )
+
+// ── Study Session Registry ────────────────────────────────────
+// We record every Study Mode session_id in localStorage so that
+// any page (index, dashboard) can detect "this is a study session"
+// and redirect to study-mode.html instead of loading in-place.
+
+function tagSessionAsStudy(sessionId) {
+    if (!sessionId) return;
+    try {
+        const map = JSON.parse(localStorage.getItem('study_sessions') || '{}');
+        map[sessionId] = 'study';
+        localStorage.setItem('study_sessions', JSON.stringify(map));
+    } catch (e) { /* localStorage unavailable */ }
+}
+
+function isStudySession(sessionId) {
+    if (!sessionId) return false;
+    try {
+        const map = JSON.parse(localStorage.getItem('study_sessions') || '{}');
+        return map[sessionId] === 'study';
+    } catch (e) { return false; }
 }
 
 // ── Auth & History ───────────────────────────────────────────
@@ -122,14 +195,36 @@ async function initAuthAndHistory() {
         if (icon) icon.textContent = document.documentElement.classList.contains('dark-theme') ? 'light_mode' : 'dark_mode';
     }
 
-    $('sidebar-toggle-btn')?.addEventListener('click', () => $('main-sidebar')?.classList.toggle('collapsed'));
+    $('sidebar-toggle-btn')?.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+            $('main-sidebar')?.classList.remove('mobile-open');
+            $('sidebar-overlay')?.classList.remove('active');
+        } else {
+            $('main-sidebar')?.classList.toggle('collapsed');
+        }
+    });
+    $('mobile-left-menu-btn')?.addEventListener('click', () => {
+        $('main-sidebar')?.classList.add('mobile-open');
+        $('sidebar-overlay')?.classList.add('active');
+    });
     $('toggle-right-panel')?.addEventListener('click', () => $('study-right-sidebar')?.classList.toggle('collapsed'));
     $('close-right-panel')?.addEventListener('click', () => $('study-right-sidebar')?.classList.add('collapsed'));
     $('open-right-panel')?.addEventListener('click', () => $('study-right-sidebar')?.classList.remove('collapsed'));
     $('sidebar-overlay')?.addEventListener('click', () => {
+        $('main-sidebar')?.classList.remove('mobile-open');
         $('main-sidebar')?.classList.add('collapsed');
         $('sidebar-overlay')?.classList.remove('active');
     });
+
+    // ── URL param session restore ─────────────────────────────
+    // If the page was opened with ?session=<id> (e.g. redirected from
+    // a history link on index.html or dashboard.html), auto-load it.
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionParam = urlParams.get('session');
+    if (sessionParam) {
+        // Wait for auth to settle then load
+        setTimeout(() => loadSession(sessionParam), 200);
+    }
 }
 
 async function fetchHistory(userId) {
@@ -138,7 +233,7 @@ async function fetchHistory(userId) {
     try {
         const { data: messages, error } = await supabase
             .from('messages').select('*').eq('user_id', userId)
-            .order('created_at', { ascending: false }).limit(50);
+            .order('created_at', { ascending: false }).limit(200);
         if (error) throw error;
 
         historyList.innerHTML = '';
@@ -158,7 +253,8 @@ async function fetchHistory(userId) {
         topSessions.slice(0, 10).forEach(session => {
             const li = document.createElement('li');
             li.className = 'history-item';
-            li.innerHTML = `<a href="#" class="history-link" data-id="${session.session_id}"><span class="history-text">${escapeHtml(session.content)}</span></a>`;
+            // All sessions in study-mode sidebar load in-place (we are already on study-mode.html)
+            li.innerHTML = `<a href="#" class="history-link" data-id="${session.session_id}"><span class="material-symbols-outlined" style="font-size:14px;flex-shrink:0;">school</span><span class="history-text">${escapeHtml(session.content)}</span></a>`;
             li.querySelector('.history-link').addEventListener('click', (e) => { e.preventDefault(); loadSession(session.session_id); });
             historyList.appendChild(li);
         });
@@ -168,6 +264,8 @@ async function fetchHistory(userId) {
 async function loadSession(sessionId) {
     state.currentSessionId = sessionId;
     state.isChatActive = true;
+    // Tag this as a study session in the registry
+    tagSessionAsStudy(sessionId);
     $('study-hero').style.display = 'none';
     $('study-chat-active').style.display = 'flex';
     try {
@@ -178,6 +276,8 @@ async function loadSession(sessionId) {
         const chatContainer = $('chat-messages');
         chatContainer.innerHTML = '';
         messages.forEach(msg => addMessage(msg.content, msg.sender, msg.image_url));
+        // Restore notes and tasks for this specific session
+        loadSessionData(sessionId);
     } catch (err) { console.error('Load session error:', err); }
 }
 
@@ -330,58 +430,156 @@ function initChat() {
         });
     }
 
-    const heroGraphToggle = $('hero-tool-create-graph');
-    if (heroGraphToggle && window.toggleGraphBar) heroGraphToggle.addEventListener('click', window.toggleGraphBar);
-    const chatGraphToggle = $('chat-tool-create-graph');
-    if (chatGraphToggle && window.toggleGraphBar) chatGraphToggle.addEventListener('click', window.toggleGraphBar);
+    // ── Graph Mode (inline — MathGPT-style) ──────────────────────
+    let graphBubbleCounter = 0;
 
-    let graphCounter = 0;
-    const plotBtn = $('graph-bar-plot-btn');
-    if (plotBtn) {
-        plotBtn.addEventListener('click', () => {
-            const fnInput = $('fn-input');
-            const expr = fnInput?.value?.trim();
-            if (!expr) return;
-            $('graph-input-bar').style.display = 'none';
-            fnInput.value = '';
-            transitionToChat();
-            const bubbleId = `ggb-study-${++graphCounter}`;
-            const chatMessages = $('chat-messages');
-            saveMessageToSupabase(`📈 Plotting function: ${expr}`, 'user');
-            const msgDiv = document.createElement('div');
-            msgDiv.classList.add('message', 'ai-message');
-            msgDiv.innerHTML = `
-                <div class="message-avatar"><img src="logo.png" alt="AI"></div>
-                <div class="message-content" style="max-width:600px; width:100%;">
-                    <div class="ai-name">Sphinx-SCA</div>
-                    <div style="padding:10px 14px; font-size:13px; font-family:monospace; color:#e94560;">📈 f(x) = ${expr}</div>
-                    <div style="border-radius:12px; overflow:hidden; border:1px solid #e0e0e0; background:#ffffff;">
-                        <div id="${bubbleId}" style="width:100%; height:420px;"></div>
+    // Define toggleGraphMode for study-mode
+    window.toggleGraphMode = function () {
+        state.graphMode = !state.graphMode;
+
+        const heroBadge = $('hero-graph-mode-badge');
+        const chatBadge = $('chat-graph-mode-badge');
+        const heroBtn = $('hero-tool-create-graph');
+        const chatBtn = $('chat-tool-create-graph');
+        const heroInput = $('hero-search-input');
+        const chatInput = $('chat-search-input');
+
+        if (state.graphMode) {
+            if (heroBadge) heroBadge.style.display = 'flex';
+            if (chatBadge) chatBadge.style.display = 'flex';
+            if (heroBtn) heroBtn.classList.add('active');
+            if (chatBtn) chatBtn.classList.add('active');
+            if (heroInput) {
+                heroInput.placeholder = 'Enter equation: e.g. sin(x), x^2 + 3x - 2, cos(x)*exp(-x/5)';
+                heroInput.classList.add('graph-mode-input');
+            }
+            if (chatInput) {
+                chatInput.placeholder = 'Enter equation: e.g. sin(x), x^2 + 3x - 2, cos(x)*exp(-x/5)';
+                chatInput.classList.add('graph-mode-input');
+            }
+            // Focus active input
+            if (state.isChatActive && chatInput) chatInput.focus();
+            else if (heroInput) heroInput.focus();
+        } else {
+            if (heroBadge) heroBadge.style.display = 'none';
+            if (chatBadge) chatBadge.style.display = 'none';
+            if (heroBtn) heroBtn.classList.remove('active');
+            if (chatBtn) chatBtn.classList.remove('active');
+            if (heroInput) {
+                heroInput.placeholder = 'Type your question here…';
+                heroInput.classList.remove('graph-mode-input');
+            }
+            if (chatInput) {
+                chatInput.placeholder = 'Ask Sphinx-SCA…';
+                chatInput.classList.remove('graph-mode-input');
+            }
+        }
+    };
+
+    // Legacy compat
+    window.toggleGraphBar = window.toggleGraphMode;
+
+    // Wire Create Graph buttons
+    const heroGraphBtn = $('hero-tool-create-graph');
+    if (heroGraphBtn) heroGraphBtn.addEventListener('click', () => window.toggleGraphMode());
+    const chatGraphBtn = $('chat-tool-create-graph');
+    if (chatGraphBtn) chatGraphBtn.addEventListener('click', () => window.toggleGraphMode());
+
+    // Plot function into study mode chat
+    window.plotFnToChat = function (expr) {
+        if (!expr || !expr.trim()) return;
+        expr = expr.trim();
+
+        transitionToChat();
+
+        const chatMessages = $('chat-messages');
+
+        // User message
+        const userDiv = document.createElement('div');
+        userDiv.classList.add('message', 'user-message');
+        userDiv.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: flex-end; width: 100%;">
+                <div class="message-content" style="max-width: 100%;">
+                    <div class="text-body"><span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;margin-right:4px;color:var(--primary);">show_chart</span>Plot: ${escapeHtml(expr)}</div>
+                </div>
+            </div>
+            <div class="message-avatar">
+                <img src="user.png" alt="User">
+            </div>`;
+        chatMessages.appendChild(userDiv);
+        saveMessageToSupabase(`📈 Plotting: ${expr}`, 'user');
+
+        // AI message with graph
+        const bubbleId = `ggb-study-${++graphBubbleCounter}`;
+        const aiDiv = document.createElement('div');
+        aiDiv.classList.add('message', 'ai-message');
+        aiDiv.innerHTML = `
+            <div class="message-avatar"><img src="logo.png" alt="AI"></div>
+            <div class="message-content" style="max-width:640px; width:100%;">
+                <div class="ai-name">Sphinx-SCA</div>
+                <div class="graph-equation-label">
+                    <span class="material-symbols-outlined" style="font-size:18px;">show_chart</span>
+                    <span>f(x) = ${escapeHtml(expr)}</span>
+                </div>
+                <div class="graph-container-wrapper">
+                    <div class="graph-loading" id="${bubbleId}-loading">
+                        <div class="graph-loading-spinner"></div>
+                        <span>Loading graph...</span>
                     </div>
-                </div>`;
-            chatMessages.appendChild(msgDiv);
-            saveMessageToSupabase(`📈 f(x) = ${expr}`, 'ai');
-            const scrollWrapper = $('study-chat-messages-wrapper');
-            if (scrollWrapper) scrollWrapper.scrollTop = scrollWrapper.scrollHeight;
-            setTimeout(() => {
-                const container = document.getElementById(bubbleId);
-                if (!container) return;
-                const appletParams = {
-                    appName: 'graphing', width: container.offsetWidth || 560, height: 420,
-                    showToolBar: false, showAlgebraInput: true, showMenuBar: false, enableRightClick: false,
-                    appletOnLoad: (api) => api.evalCommand('f(x) = ' + expr),
-                };
-                if (typeof GGBApplet !== 'undefined') new GGBApplet(appletParams, true).inject(bubbleId);
-            }, 300);
-        });
-    }
+                    <div id="${bubbleId}" style="width:100%; height:420px;"></div>
+                </div>
+                <div class="message-actions">
+                    <button class="action-btn" data-action="copy" title="Copy equation">
+                        <span class="material-symbols-outlined">content_copy</span>
+                    </button>
+                </div>
+            </div>`;
+        chatMessages.appendChild(aiDiv);
+        saveMessageToSupabase(`📈 f(x) = ${expr}`, 'ai');
 
-    $('graph-bar-close-btn')?.addEventListener('click', () => {
-        const bar = $('graph-input-bar');
-        if (bar) bar.style.display = 'none';
-        const fnInput = $('fn-input');
-        if (fnInput) fnInput.value = '';
-    });
+        const scrollWrapper = $('study-chat-messages-wrapper');
+        if (scrollWrapper) scrollWrapper.scrollTop = scrollWrapper.scrollHeight;
+
+        // Load GeoGebra
+        setTimeout(() => {
+            const container = document.getElementById(bubbleId);
+            const loadingEl = document.getElementById(bubbleId + '-loading');
+            if (!container) return;
+
+            const appletParams = {
+                appName: 'graphing',
+                width: container.offsetWidth || 560,
+                height: 420,
+                showToolBar: false,
+                showAlgebraInput: true,
+                showMenuBar: false,
+                enableRightClick: false,
+                scaleContainerClass: 'graph-container-wrapper',
+                appletOnLoad: (api) => {
+                    api.evalCommand('f(x) = ' + expr);
+                    if (loadingEl) loadingEl.style.display = 'none';
+                },
+            };
+
+            if (typeof GGBApplet !== 'undefined') {
+                new GGBApplet(appletParams, true).inject(bubbleId);
+            } else {
+                const script = document.createElement('script');
+                script.src = 'https://www.geogebra.org/apps/deployggb.js';
+                script.onload = () => new GGBApplet(appletParams, true).inject(bubbleId);
+                script.onerror = () => {
+                    if (loadingEl) loadingEl.style.display = 'none';
+                    container.innerHTML = `
+                        <div style="padding:30px;text-align:center;color:var(--text-muted);">
+                            <span class="material-symbols-outlined" style="font-size:48px;display:block;margin-bottom:12px;opacity:0.5;">error_outline</span>
+                            <p>Failed to load graphing engine.</p>
+                            <p style="font-size:12px;margin-top:8px;">Please check your internet connection.</p>
+                        </div>`;
+                };
+                document.head.appendChild(script);
+            }
+        }, 300);
+    };
 }
 
 function bindStudyChatActions() {
@@ -407,8 +605,29 @@ function bindStudyChatActions() {
             }
         } else if (action === 'like') {
             btn.classList.toggle('liked');
+            const isLiked = btn.classList.contains('liked');
             const icon = btn.querySelector('.material-symbols-outlined');
-            if (icon) icon.textContent = btn.classList.contains('liked') ? 'thumb_up' : 'thumb_up_off_alt';
+            if (icon) icon.textContent = isLiked ? 'thumb_up' : 'thumb_up_off_alt';
+
+            // Handle saving/removing the solution
+            const textToSave = msgContent?.querySelector('.text-body')?.textContent || '';
+            let savedSolutions = [];
+            try { savedSolutions = JSON.parse(localStorage.getItem('study_saved_solutions') || '[]'); } catch (e) { }
+
+            if (isLiked && textToSave) {
+                // Check if already saved to avoid duplicates
+                if (!savedSolutions.some(s => s.content === textToSave)) {
+                    savedSolutions.push({
+                        id: Date.now().toString(),
+                        content: textToSave,
+                        date: new Date().toISOString()
+                    });
+                }
+            } else if (!isLiked && textToSave) {
+                savedSolutions = savedSolutions.filter(s => s.content !== textToSave);
+            }
+            localStorage.setItem('study_saved_solutions', JSON.stringify(savedSolutions));
+
             const dislikeBtn = btn.parentElement?.querySelector('[data-action="dislike"]');
             if (dislikeBtn?.classList.contains('disliked')) {
                 dislikeBtn.classList.remove('disliked');
@@ -503,7 +722,14 @@ function transitionToChat() {
         if (studyHero) studyHero.style.display = 'none';
         if (studyChat) studyChat.style.display = 'flex';
     }
-    if (!state.currentSessionId) state.currentSessionId = generateUUID();
+    if (!state.currentSessionId) {
+        state.currentSessionId = generateUUID();
+        // Tag the new session as a Study Mode session so other pages
+        // (index.html, dashboard.html) can redirect to study-mode.html
+        tagSessionAsStudy(state.currentSessionId);
+        // Start with a clean notes/tasks slate for this fresh session
+        loadSessionData(state.currentSessionId);
+    }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -515,6 +741,21 @@ async function handleSend(type) {
     const input = $(`${type}-search-input`);
     const text = input?.value?.trim() || '';  // ✅ FIX (W-09): null-safe access
     const imageUrl = state.uploadedImageUrl;
+
+    // ── Graph Mode Intercept ──
+    if (state.graphMode && text) {
+        input.value = '';
+        input.style.height = 'auto';
+        if (typeof window.plotFnToChat === 'function') {
+            window.plotFnToChat(text);
+        }
+        // Auto-exit graph mode
+        if (typeof window.toggleGraphMode === 'function') {
+            window.toggleGraphMode();
+        }
+        return;
+    }
+
     if (!text && !imageUrl) return;
 
     if (state.currentMode === 'study') return handleStudySend(text, imageUrl, type);
@@ -556,6 +797,8 @@ async function handleSend(type) {
         });
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
+        let sourcesObj = null;
+
         while (true) {
             const { value, done } = await reader.read();
             if (done) break;
@@ -568,8 +811,16 @@ async function handleSend(type) {
                     try {
                         const data = JSON.parse(dataStr);
                         if (data.content) {
+                            if (data.content.includes('__SEARCH_SOURCES__')) {
+                                const match = data.content.match(/```json\n__SEARCH_SOURCES__\n([\s\S]*?)\n```/);
+                                if (match) sourcesObj = JSON.parse(match[1]);
+                                return;
+                            }
                             if (!gotFirstToken) { gotFirstToken = true; aiTextDiv.querySelector('[data-role="skeleton"]')?.remove(); }
                             fullResponse += data.content;
+                            if (fullResponse.includes('<!-- SEARCH_DONE -->')) {
+                                fullResponse = fullResponse.replace('is-active', '').replace('Searching ', 'Searched ').replace(/<!-- SEARCH_DONE -->\n*/g, '');
+                            }
                             aiTextDiv.innerHTML = formatMessage(fullResponse) + '<span class="typing-cursor" aria-hidden="true"></span>';
                             const wrapper = $('study-chat-messages-wrapper');
                             wrapper.scrollTop = wrapper.scrollHeight;
@@ -584,6 +835,9 @@ async function handleSend(type) {
     } finally {
         state.isStreaming = false;
         aiTextDiv.innerHTML = formatMessage(fullResponse);
+        if (typeof sourcesObj !== 'undefined' && sourcesObj && sourcesObj.sources) {
+            if (window.renderSearchSources) window.renderSearchSources(aiMsgDiv, sourcesObj);
+        }
     }
 }
 
@@ -621,6 +875,58 @@ async function handleStudySend(text, imageUrl, type) {
         const intent = classifyIntentLocal(text);
 
         // ── FAST PATHS ────────────────────────────────────────────
+        if (intent === 'search') {
+            const res = await fetch(`${API_URL}/solve_stream`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question: text, mode: 'general', user_id: state.currentUserId })
+            });
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let fullResponse = '';
+            let gotFirstToken = false;
+            let sourcesObj = null;
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+                lines.forEach(line => {
+                    if (line.startsWith('data: ')) {
+                        const dataStr = line.slice(6).trim();
+                        if (dataStr === '[DONE]') return;
+                        try {
+                            const data = JSON.parse(dataStr);
+                            if (data.content) {
+                                if (data.content.includes('__SEARCH_SOURCES__')) {
+                                    // Parse the JSON block
+                                    const match = data.content.match(/```json\n__SEARCH_SOURCES__\n([\s\S]*?)\n```/);
+                                    if (match) sourcesObj = JSON.parse(match[1]);
+                                    return;
+                                }
+                                if (!gotFirstToken) { gotFirstToken = true; aiTextDiv.querySelector('[data-role="skeleton"]')?.remove(); }
+                                fullResponse += data.content;
+                                if (fullResponse.includes('<!-- SEARCH_DONE -->')) {
+                                    fullResponse = fullResponse.replace('is-active', '').replace('Searching ', 'Searched ').replace(/<!-- SEARCH_DONE -->\n*/g, '');
+                                }
+                                aiTextDiv.innerHTML = formatMessage(fullResponse) + '<span class="typing-cursor" aria-hidden="true"></span>';
+                                const wrapper = $('study-chat-messages-wrapper');
+                                wrapper.scrollTop = wrapper.scrollHeight;
+                            }
+                        } catch (e) { }
+                    }
+                });
+            }
+
+            aiTextDiv.innerHTML = formatMessage(fullResponse);
+            if (sourcesObj && sourcesObj.sources && sourcesObj.sources.length > 0) {
+                renderSearchSources(aiMsgDiv, sourcesObj);
+            }
+            saveMessageToSupabase(fullResponse, 'ai');
+            state.isStreaming = false;
+            return;
+        }
+
         if (intent === 'casual') {
             const res = await fetch(`${API_URL}/study/chat`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -782,6 +1088,9 @@ function classifyIntentLocal(text) {
 
     // Explain / theory
     if (/explain|اشرح|وضح|فهمني|ايه هو|what is|what are|يعني ايه|definition|concept/.test(t)) return 'explain';
+
+    // Search
+    if (/search|ابحث|فيديو|youtube|video|find me videos|أخبار|news|who is|what.?s happening/.test(t)) return 'search';
 
     // Casual
     if (/^(hi|hello|hey|مرحبا|اهلا|السلام|ازيك|صباح|مساء|شكرا|thanks|bye|كيفك|عامل ايه|how are you|who are you|what can you do)[\s!?.]*$/.test(t)) return 'casual';
@@ -1145,7 +1454,7 @@ function initStudyTools() {
             state.freeTimerElapsed = 0;
         } else {
             // Toggle between work and break or just reset
-            state.timeRemaining = 0; 
+            state.timeRemaining = 0;
             // The interval logic will handle session completion in the next tick
         }
         updateTimerUI();
@@ -1156,10 +1465,10 @@ function initStudyTools() {
         btn.addEventListener('click', () => {
             timerPlanButtons.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            
+
             const workMins = parseInt(btn.dataset.work || '0');
             const breakMins = parseInt(btn.dataset.break || '0');
-            
+
             clearInterval(state.timerInterval);
             state.isRunning = false;
             const playIcon = $('play-icon');
@@ -1184,10 +1493,49 @@ function initStudyTools() {
     initNotes();
 }
 
-function initTasks() {
-    const savedTasks = localStorage.getItem('study-tasks');
-    if (savedTasks) try { state.tasks = JSON.parse(savedTasks); renderTasks(); } catch (e) { }
+// ── Per-session data helpers ──────────────────────────────────
 
+/**
+ * Load notes & tasks for a specific session from localStorage.
+ * Falls back to the legacy global keys for sessions created before
+ * this feature was added.
+ */
+function loadSessionData(sessionId) {
+    const sid = sessionId || 'default';
+
+    // Tasks
+    const taskKey = `study-tasks-${sid}`;
+    const savedTasks = localStorage.getItem(taskKey);
+    if (savedTasks) {
+        try { state.tasks = JSON.parse(savedTasks); } catch (e) { state.tasks = []; }
+    } else if (sid === 'default') {
+        // Legacy fallback for pre-migration sessions
+        const legacy = localStorage.getItem('study-tasks');
+        try { state.tasks = legacy ? JSON.parse(legacy) : []; } catch (e) { state.tasks = []; }
+    } else {
+        state.tasks = [];
+    }
+
+    // Notes
+    const noteKey = `study-notes-blocks-${sid}`;
+    const savedNotes = localStorage.getItem(noteKey);
+    if (savedNotes) {
+        try { state.notes = JSON.parse(savedNotes); } catch (e) { state.notes = []; }
+    } else if (sid === 'default') {
+        // Legacy fallback
+        const legacy = localStorage.getItem('study-notes-blocks');
+        try { state.notes = legacy ? JSON.parse(legacy) : []; } catch (e) { state.notes = []; }
+    } else {
+        state.notes = [];
+    }
+
+    renderTasks();
+    renderNotes();
+}
+
+function initTasks() {
+    // Tasks are session-scoped now; initStudyTools calls loadSessionData
+    // after session is known, so we just wire up the buttons here.
     $('task-add-btn')?.addEventListener('click', () => addTask());
     $('task-input')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') addTask(); });
 }
@@ -1203,7 +1551,10 @@ function addTask() {
 
 function toggleTask(id) { state.tasks = state.tasks.map(t => t.id === id ? { ...t, done: !t.done } : t); saveTasks(); renderTasks(); }
 function deleteTask(id) { state.tasks = state.tasks.filter(t => t.id !== id); saveTasks(); renderTasks(); }
-function saveTasks() { localStorage.setItem('study-tasks', JSON.stringify(state.tasks)); }
+function saveTasks() {
+    const sid = state.currentSessionId || 'default';
+    localStorage.setItem(`study-tasks-${sid}`, JSON.stringify(state.tasks));
+}
 
 function renderTasks() {
     const list = $('tasks-list');
@@ -1222,11 +1573,16 @@ function renderTasks() {
 }
 
 function initNotes() {
-    const savedNotes = localStorage.getItem('study-notes-blocks');
-    if (savedNotes) try { state.notes = JSON.parse(savedNotes); renderNotes(); } catch (e) { }
-    else {
+    // Notes are session-scoped now; loadSessionData handles restoration.
+    // Migrate any v1 global notes into the 'default' session slot once.
+    if (!localStorage.getItem('study-notes-migrated')) {
         const oldNotes = localStorage.getItem('study-notes');
-        if (oldNotes?.trim()) { state.notes = [{ id: Date.now(), text: oldNotes }]; saveNotes(); renderNotes(); localStorage.removeItem('study-notes'); }
+        if (oldNotes?.trim()) {
+            const migrated = [{ id: Date.now(), text: oldNotes }];
+            localStorage.setItem('study-notes-blocks-default', JSON.stringify(migrated));
+            localStorage.removeItem('study-notes');
+        }
+        localStorage.setItem('study-notes-migrated', '1');
     }
     $('note-add-btn')?.addEventListener('click', () => addNote());
     $('note-input')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') addNote(); });
@@ -1243,7 +1599,10 @@ function addNote() {
 }
 
 function deleteNote(id) { state.notes = state.notes.filter(n => n.id !== id); saveNotes(); renderNotes(); }
-function saveNotes() { localStorage.setItem('study-notes-blocks', JSON.stringify(state.notes)); }
+function saveNotes() {
+    const sid = state.currentSessionId || 'default';
+    localStorage.setItem(`study-notes-blocks-${sid}`, JSON.stringify(state.notes));
+}
 function renderNotes() {
     const list = $('notes-list');
     if (!list) return;
@@ -1297,11 +1656,24 @@ document.addEventListener('DOMContentLoaded', () => {
     initStudyTools();
     initModals();
     initToolsAndSymbols();
-    
+
     // Auto-collapse right sidebar on mobile
     if (window.innerWidth <= 1200) {
         document.getElementById('study-right-sidebar')?.classList.add('collapsed');
     }
-    
+
+    // Show Study Mode Welcome Modal (Mockup logic)
+    // We force it to appear unless '?session=...' is in the URL (indicating we are in history mode)
+    const urlParamsObj = new URLSearchParams(window.location.search);
+    const studyOverlay = document.getElementById('study-welcome-overlay');
+    if (!urlParamsObj.get('session') && studyOverlay) {
+        studyOverlay.classList.add('active');
+    }
+
     setTimeout(() => { if (!state.isChatActive) { state.currentMode = 'study'; syncModeUI('study'); } }, 100);
+
+    // Load global (default-session) notes/tasks for the initial hero view.
+    if (!urlParamsObj.get('session')) {
+        loadSessionData('default');
+    }
 });

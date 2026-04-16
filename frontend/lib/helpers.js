@@ -66,4 +66,5 @@ export const appState = {
     currentSessionId: generateUUID(),
     isChatActive: false,
     isStreaming: false,
+    graphMode: false,
 };

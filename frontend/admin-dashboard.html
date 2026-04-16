@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | Sphinx-SCA</title>
+    <meta name="description" content="Sphinx-SCA Admin Dashboard.">
+    <link rel="icon" type="image/png" href="/logo.png">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Material Icons -->
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <link rel="stylesheet" href="/styles/style.css">
+    
+    <script>
+        // Restrict access
+        if (localStorage.getItem('admin_logged_in') !== 'true') {
+            window.location.href = 'login.html';
+        }
+    </script>
+    <style>
+        /* Base Admin Styles */
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        .admin-layout {
+            display: flex;
+            min-height: 100vh;
+            width: 100%;
+        }
+
+        /* Sidebar */
+        .admin-sidebar {
+            width: 280px;
+            background: rgba(23, 23, 23, 0.7);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            padding: var(--space-6) 0;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+        }
+
+        .brand-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 var(--space-6);
+            margin-bottom: var(--space-8);
+            cursor: pointer;
+        }
+
+        .brand-logo {
+            width: 32px;
+            height: 32px;
+        }
+
+        .brand-text {
+            font-weight: 800;
+            font-size: 18px;
+            letter-spacing: -0.5px;
+        }
+
+        .brand-text span {
+            color: var(--primary);
+        }
+
+        .admin-nav {
+            padding: 0 var(--space-4);
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 16px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 14px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            margin-bottom: 4px;
+            cursor: pointer;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: rgba(217, 119, 87, 0.1);
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            font-weight: 600;
+        }
+
+        .nav-item .material-symbols-outlined {
+            font-size: 20px;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 0 var(--space-4);
+        }
+
+        /* Main Content */
+        .admin-main {
+            flex: 1;
+            margin-left: 280px;
+            padding: var(--space-8) var(--space-10);
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-8);
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .page-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+        }
+
+        .admin-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+        }
+
+        .admin-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .admin-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .admin-name {
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .admin-role {
+            font-size: 11px;
+            color: var(--primary);
+            text-transform: uppercase;
+        }
+
+        /* Stats overview */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--space-6);
+            margin-bottom: var(--space-8);
+        }
+
+        .stat-card {
+            background: rgba(30, 30, 30, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(217, 119, 87, 0.3);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), transparent);
+            opacity: 0.5;
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .stat-title {
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: rgba(217, 119, 87, 0.1);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 8px;
+        }
+
+        .stat-trend {
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .trend-up {
+            color: #10B981;
+        }
+
+        .trend-down {
+            color: #EF4444;
+        }
+
+        /* Charts & Lists */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: var(--space-6);
+        }
+
+        .panel {
+            background: rgba(30, 30, 30, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 24px;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        /* User List */
+        .user-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .user-item:last-child {
+            border-bottom: none;
+        }
+
+        .user-item-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .user-item-info {
+            flex: 1;
+        }
+
+        .user-item-name {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .user-item-email {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .user-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10B981;
+        }
+
+        .user-status.offline {
+            background: var(--text-muted);
+        }
+
+        @media (max-width: 1024px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .admin-sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+            }
+            .admin-main {
+                margin-left: 0;
+                padding: var(--space-4);
+            }
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="brand-container" onclick="window.location.href='/'">
+                <img src="/logo.png" alt="Logo" class="brand-logo">
+                <div class="brand-text">Sphinx<span>Admin</span></div>
+            </div>
+
+            <nav class="admin-nav">
+                <div class="nav-item active">
+                    <span class="material-symbols-outlined">dashboard</span>
+                    Dashboard
+                </div>
+                <div class="nav-item">
+                    <span class="material-symbols-outlined">group</span>
+                    Users Management
+                </div>
+                <div class="nav-item">
+                    <span class="material-symbols-outlined">forum</span>
+                    Chats & Logs
+                </div>
+                <div class="nav-item">
+                    <span class="material-symbols-outlined">monitoring</span>
+                    System Health
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="nav-item" onclick="logoutAdmin()">
+                    <span class="material-symbols-outlined">logout</span>
+                    Log out
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="admin-main">
+            <div class="admin-header">
+                <div>
+                    <h1 class="page-title">Platform Overview</h1>
+                    <p class="page-subtitle">Real-time metrics and system status.</p>
+                </div>
+                <div class="header-actions">
+                    <div class="admin-profile">
+                        <div class="admin-avatar">
+                            <span class="material-symbols-outlined" style="font-size: 20px;">shield_person</span>
+                        </div>
+                        <div class="admin-info">
+                            <span class="admin-name">Super Admin</span>
+                            <span class="admin-role">System Owner</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">Total Users</span>
+                        <div class="stat-icon">
+                            <span class="material-symbols-outlined">group</span>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="total-users">--</div>
+                    <div class="stat-trend trend-up">
+                        <span class="material-symbols-outlined" style="font-size: 16px;">trending_up</span>
+                        +12% this month
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">Active Users (24h)</span>
+                        <div class="stat-icon" style="color: #10B981; background: rgba(16, 185, 129, 0.1);">
+                            <span class="material-symbols-outlined">bolt</span>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="active-users">--</div>
+                    <div class="stat-trend trend-up">
+                        <span class="material-symbols-outlined" style="font-size: 16px;">trending_up</span>
+                        +5% from yesterday
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">Total AI Requests</span>
+                        <div class="stat-icon" style="color: #8B5CF6; background: rgba(139, 92, 246, 0.1);">
+                            <span class="material-symbols-outlined">smart_toy</span>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="total-queries">--</div>
+                    <div class="stat-trend trend-up">
+                        <span class="material-symbols-outlined" style="font-size: 16px;">trending_up</span>
+                        +24% this week
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts and Activity -->
+            <div class="content-grid">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">User Growth</h2>
+                        <span class="material-symbols-outlined" style="color: var(--text-muted);">more_horiz</span>
+                    </div>
+                    <div>
+                        <canvas id="growthChart" height="250"></canvas>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Recent Signups</h2>
+                    </div>
+                    <ul class="user-list" id="recent-users-list">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { supabase } from './supabaseClient.js';
+
+        // Initialize Loading State
+        document.getElementById('total-users').textContent = "...";
+        document.getElementById('active-users').textContent = "...";
+        document.getElementById('total-queries').textContent = "...";
+
+        const usersList = document.getElementById('recent-users-list');
+        usersList.innerHTML = '<li class="user-item"><div class="user-item-info"><div class="user-item-name">Loading...</div></div></li>';
+
+        // Initialize Chart with empty data
+        const ctx = document.getElementById('growthChart').getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(217, 119, 87, 0.5)'); 
+        gradient.addColorStop(1, 'rgba(217, 119, 87, 0.0)');
+
+        window.growthChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+                datasets: [{
+                    label: 'Active Users',
+                    data: [0, 0, 0, 0, 0, 0, 0],
+                    borderColor: '#D97757',
+                    backgroundColor: gradient,
+                    borderWidth: 3,
+                    pointBackgroundColor: '#171717',
+                    pointBorderColor: '#D97757',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(255,255,255,0.05)',
+                            drawBorder: false
+                        },
+                        ticks: { color: '#888' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#888' }
+                    }
+                }
+            }
+        });
+        
+        window.logoutAdmin = function() {
+            localStorage.removeItem('admin_logged_in');
+            window.location.href = 'login.html';
+        };
+
+        async function tryFetchRealStats() {
+            try {
+                const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+                    ? 'http://localhost:8000' 
+                    : window.location.origin;
+                    
+                const res = await fetch(`${API_URL}/admin/stats`);
+                const result = await res.json();
+                
+                if (result.success) {
+                    const totalUsers = result.total_users || 0;
+                    const activeUsers = result.active_users || 0;
+                    const totalQueries = result.total_queries || 0;
+                    
+                    document.getElementById('total-users').textContent = totalUsers.toLocaleString();
+                    document.getElementById('active-users').textContent = activeUsers.toLocaleString();
+                    document.getElementById('total-queries').textContent = totalQueries.toLocaleString();
+                    
+                    // Update chart with real historical data if available
+                    if(window.growthChartInstance && result.chart && result.chart.labels.length > 0) {
+                        window.growthChartInstance.data.labels = result.chart.labels;
+                        window.growthChartInstance.data.datasets[0].data = result.chart.data;
+                        window.growthChartInstance.data.datasets[0].label = 'Total Users';
+                        window.growthChartInstance.update();
+                    } else if (window.growthChartInstance) {
+                        // Fallback logic if no chart data was provided
+                        window.growthChartInstance.data.datasets[0].data[5] = Math.max(activeUsers - 2, 0);
+                        window.growthChartInstance.data.datasets[0].data[6] = activeUsers;
+                        window.growthChartInstance.update();
+                    }
+
+                    // Update recent users list if real data exists
+                    if (result.recent_users && result.recent_users.length > 0) {
+                        const usersList = document.getElementById('recent-users-list');
+                        usersList.innerHTML = ''; 
+                        result.recent_users.forEach(user => {
+                            const initial = user.name.charAt(0);
+                            usersList.innerHTML += `
+                                <li class="user-item">
+                                    <div class="user-item-avatar">${initial}</div>
+                                    <div class="user-item-info">
+                                        <div class="user-item-name">${user.name}</div>
+                                        <div class="user-item-email">${user.email}</div>
+                                    </div>
+                                    <div class="user-status ${user.status}"></div>
+                                </li>
+                            `;
+                        });
+                    } else {
+                        document.getElementById('recent-users-list').innerHTML = '<li class="user-item"><div class="user-item-info"><div class="user-item-name">No recent users found (RLS restricted?)</div></div></li>';
+                    }
+                } else {
+                    document.getElementById('total-users').innerHTML = '<span style="font-size:14px; color:#ef4444">API Error</span>';
+                    console.error("Failed to fetch real stats:", result.error);
+                }
+            } catch (e) {
+                document.getElementById('total-users').innerHTML = '<span style="font-size:14px; color:#ef4444">Backend Offline</span>';
+                console.error("Error fetching real stats.", e);
+            }
+        }
+        
+        tryFetchRealStats();
+    </script>
+</body>
+</html>

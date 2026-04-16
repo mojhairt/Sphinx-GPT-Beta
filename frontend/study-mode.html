@@ -57,7 +57,7 @@
                 </button>
             </div>
             <div class="sidebar-action">
-                <button class="new-chat-sidebar-btn" onclick="window.location.reload();">
+                <button class="new-chat-sidebar-btn" onclick="window.location.href='/study-mode.html';">
                     <span class="material-symbols-outlined">add</span>
                     <span class="btn-text">New chat</span>
                 </button>
@@ -92,6 +92,9 @@
             <!-- MAIN AREA — Chat -->
             <main class="study-chat-main" id="study-main">
                 <header class="scm-header">
+                    <button class="mobile-left-menu-btn" id="mobile-left-menu-btn" style="display: none;">
+                        <span class="material-symbols-outlined" style="font-size: 24px;">menu</span>
+                    </button>
                     <div class="logo-container" onclick="window.location.href='/'">
                         <img src="/logo.png" alt="Sphinx-SCA" class="logo-icon">
                         <div class="logo-text">
@@ -192,20 +195,28 @@
                                     </div>
                                     <button class="remove-preview-btn" id="hero-remove-preview-btn">×</button>
                                 </div>
+                                <!-- Graph Mode Indicator -->
+                                <div class="graph-mode-badge" id="hero-graph-mode-badge" style="display:none;">
+                                    <span class="material-symbols-outlined" style="font-size:16px;">show_chart</span>
+                                    <span>Graph Mode</span>
+                                    <button class="graph-mode-close" onclick="window.toggleGraphMode && window.toggleGraphMode()" title="Exit Graph Mode">
+                                        <span class="material-symbols-outlined" style="font-size:14px;">close</span>
+                                    </button>
+                                </div>
                                 <textarea class="search-input" id="hero-search-input"
                                     placeholder="Type your question here…" rows="1"></textarea>
 
                                 <div class="search-footer">
                                     <div class="search-tools">
+                                        <button class="tool-pill-btn" id="hero-tool-create-graph" title="Create Graph">
+                                            <span class="material-symbols-outlined"
+                                                style="font-size:18px;">show_chart</span>
+                                            <span>Create Graph</span>
+                                        </button>
                                         <button class="tool-pill-btn" id="hero-math-keyboard-toggle" title="Symbols">
                                             <span class="material-symbols-outlined"
                                                 style="font-size:18px;">functions</span>
                                             <span>Symbols</span>
-                                        </button>
-                                        <button class="tool-pill-btn" id="hero-tool-create-graph" title="Tools">
-                                            <span class="material-symbols-outlined"
-                                                style="font-size:18px;">grid_view</span>
-                                            <span>Creat Graph</span>
                                         </button>
                                     </div>
                                     <div class="search-actions">
@@ -273,19 +284,27 @@
                                     </div>
                                     <button class="remove-preview-btn" id="chat-remove-preview-btn">×</button>
                                 </div>
+                                <!-- Graph Mode Indicator -->
+                                <div class="graph-mode-badge" id="chat-graph-mode-badge" style="display:none;">
+                                    <span class="material-symbols-outlined" style="font-size:16px;">show_chart</span>
+                                    <span>Graph Mode</span>
+                                    <button class="graph-mode-close" onclick="window.toggleGraphMode && window.toggleGraphMode()" title="Exit Graph Mode">
+                                        <span class="material-symbols-outlined" style="font-size:14px;">close</span>
+                                    </button>
+                                </div>
                                 <textarea class="search-input" id="chat-search-input" placeholder="Ask Sphinx-SCA…"
                                     rows="1"></textarea>
                                 <div class="search-footer">
                                     <div class="search-tools">
+                                        <button class="tool-pill-btn" id="chat-tool-create-graph" title="Create Graph">
+                                            <span class="material-symbols-outlined"
+                                                style="font-size:18px;">show_chart</span>
+                                            <span>Create Graph</span>
+                                        </button>
                                         <button class="tool-pill-btn" id="chat-math-keyboard-toggle" title="Symbols">
                                             <span class="material-symbols-outlined"
                                                 style="font-size:18px;">functions</span>
                                             <span>Symbols</span>
-                                        </button>
-                                        <button class="tool-pill-btn" id="chat-tool-create-graph" title="Tools">
-                                            <span class="material-symbols-outlined"
-                                                style="font-size:18px;">grid_view</span>
-                                            <span>Tools</span>
                                         </button>
                                     </div>
                                     <div class="search-actions">
@@ -466,12 +485,40 @@
         </div>
     </div>
 
-    <div id="graph-input-bar" class="graph-input-bar">
-        <span class="material-symbols-outlined drag-handle">drag_indicator</span>
-        <input id="fn-input" type="text" placeholder="y = sin(x)" class="graph-bar-input">
-        <button id="graph-bar-plot-btn" class="graph-bar-plot-btn">Plot</button>
-        <button id="graph-bar-close-btn" class="graph-bar-close-btn"><span
-                class="material-symbols-outlined">close</span></button>
+    <!-- Graph Input Bar (legacy - removed, using inline mode instead) -->
+
+    <!-- Welcome Modal (Pop Message) -->
+    <div class="study-welcome-overlay active" id="study-welcome-overlay">
+        <div class="welcome-modal-card">
+            <!-- Logo — same pattern as hero-logo-circle -->
+            <div class="welcome-logo-wrap">
+                <img src="/logo.png" alt="Sphinx-SCA" class="welcome-logo-img">
+            </div>
+
+            <h2 class="welcome-title">Welcome to Study Mode</h2>
+
+            <p class="welcome-subtitle">Your focused environment for mastering math — one problem at a time.</p>
+
+            <div class="welcome-features">
+                <div class="welcome-feature">
+                    <span class="material-symbols-outlined">timer</span>
+                    <span>Focus Timer</span>
+                </div>
+                <div class="welcome-feature">
+                    <span class="material-symbols-outlined">edit_note</span>
+                    <span>Quick Notes</span>
+                </div>
+                <div class="welcome-feature">
+                    <span class="material-symbols-outlined">checklist</span>
+                    <span>Task Tracking</span>
+                </div>
+            </div>
+
+            <button class="welcome-start-btn" id="welcome-start-btn">
+                <span class="material-symbols-outlined" style="font-size:18px;">play_arrow</span>
+                Study Now
+            </button>
+        </div>
     </div>
 
     <script src="/study-mode.js" type="module"></script>

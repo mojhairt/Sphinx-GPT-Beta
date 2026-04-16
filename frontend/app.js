@@ -68,21 +68,41 @@ async function fetchUserData(userId) {
                 }
             });
 
+            // Read the study session registry tagged by study-mode.js
+            let studySessionMap = {};
+            try { studySessionMap = JSON.parse(localStorage.getItem('study_sessions') || '{}'); } catch (e) { }
+
             const topSessions = sessions.slice(0, 15);
+
             if (topSessions.length > 0) {
                 topSessions.forEach((sessionMsg) => {
+                    const isStudy = studySessionMap[sessionMsg.session_id] === 'study';
                     const li = document.createElement('li');
                     li.className = 'history-item';
-                    li.innerHTML = `
-                        <a href="#" class="history-link" data-session-id="${sessionMsg.session_id}">
-                            <span class="history-text"></span>
-                        </a>
-                    `;
+
+                    if (isStudy) {
+                        // Study Mode session → redirect to study-mode.html
+                        li.innerHTML = `
+                            <a href="study-mode.html?session=${sessionMsg.session_id}" class="history-link" data-session-id="${sessionMsg.session_id}">
+                                <span class="material-symbols-outlined" style="font-size:14px;flex-shrink:0;color:var(--primary);">school</span>
+                                <span class="history-text"></span>
+                            </a>
+                        `;
+                    } else {
+                        // Normal chat → load in-page as before
+                        li.innerHTML = `
+                            <a href="#" class="history-link" data-session-id="${sessionMsg.session_id}">
+                                <span class="material-symbols-outlined" style="font-size:14px;flex-shrink:0;">forum</span>
+                                <span class="history-text"></span>
+                            </a>
+                        `;
+                        li.querySelector('.history-link').addEventListener('click', (e) => {
+                            e.preventDefault();
+                            loadSession(sessionMsg.session_id, sessionMsg.user_id);
+                        });
+                    }
+
                     li.querySelector('.history-text').textContent = sessionMsg.content;
-                    li.querySelector('.history-link').addEventListener('click', (e) => {
-                        e.preventDefault();
-                        loadSession(sessionMsg.session_id, sessionMsg.user_id);
-                    });
                     sidebarHistoryList.appendChild(li);
                 });
             } else {
@@ -169,6 +189,48 @@ document.addEventListener('DOMContentLoaded', async () => {
     initImageUpload();
     initChat();
 
+    // ── Rotating placeholder for main search input ──
+    const mainInput = document.getElementById('main-search-input');
+    if (mainInput) {
+        const placeholders = [
+            'Solve x² + 5x + 6 = 0',
+            'Find the derivative of sin(x)·eˣ',
+            'Integrate ∫ (1/x) dx from 1 to e',
+            'Simplify √(50) + 3√(2)',
+            'What is the limit of (sin x)/x as x→0?',
+            'Factor 2x³ - 6x² + 4x',
+        ];
+        let placeholderIdx = 0;
+        let placeholderInterval;
+
+        function rotatePlaceholder() {
+            // Only animate when input is empty & not focused
+            if (!mainInput.value && document.activeElement !== mainInput) {
+                mainInput.style.transition = 'opacity 0.3s ease';
+                mainInput.style.opacity = '0.5';
+                setTimeout(() => {
+                    placeholderIdx = (placeholderIdx + 1) % placeholders.length;
+                    mainInput.placeholder = placeholders[placeholderIdx];
+                    mainInput.style.opacity = '1';
+                }, 300);
+            }
+        }
+
+        placeholderInterval = setInterval(rotatePlaceholder, 3500);
+
+        // Pause rotation when input is focused
+        mainInput.addEventListener('focus', () => {
+            clearInterval(placeholderInterval);
+            mainInput.placeholder = 'Type your question here…';
+            mainInput.style.opacity = '1';
+        });
+        mainInput.addEventListener('blur', () => {
+            if (!mainInput.value) {
+                placeholderInterval = setInterval(rotatePlaceholder, 3500);
+            }
+        });
+    }
+
     // 4. Supabase Auth — session & user data
     const {
         data: { session },
@@ -186,7 +248,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         const heroTitle = document.querySelector('.hero-title');
-        if (heroTitle) heroTitle.textContent = 'Your Personal Math Solver';
+        if (heroTitle) heroTitle.textContent = 'Sphinx-SCA Your Personal Math Solver';
 
         // Hide login, show avatar
         const loginBtn = document.getElementById('nav-login-btn');
@@ -227,5 +289,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     });
+
+
+    //khairy update from 249 to 269
+    //(اضافة خاصية محادثات مود المذاكرة + خاصية الملاحظات والتاسكات )
+
+    // 6. URL ?session= param — auto-load a normal chat session when landing
+    //    from dashboard.html or any shared link.
+    //    Study Mode sessions are handled by study-mode.html, so we skip those.
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionParam = urlParams.get('session');
+    if (sessionParam) {
+        let studySessionMap = {};
+        try { studySessionMap = JSON.parse(localStorage.getItem('study_sessions') || '{}'); } catch (e) { }
+        if (studySessionMap[sessionParam] === 'study') {
+            // Redirect to study-mode.html — wrong page
+            window.location.replace(`study-mode.html?session=${sessionParam}`);
+        } else {
+            // Load normal chat session after auth settles
+            setTimeout(() => loadSession(sessionParam, null), 300);
+        }
+    }
 });
 

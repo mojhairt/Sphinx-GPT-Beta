@@ -7,13 +7,9 @@ load_dotenv()
 
 HF_TOKEN = os.getenv("HF_TOKEN")
 
-# ✅ FIX (W-07): Reuse a single client instance instead of creating one per call
-_hf_client = AsyncInferenceClient(api_key=HF_TOKEN) if HF_TOKEN else None
+_hf_client = AsyncInferenceClient(api_key=HF_TOKEN) if HF_TOKEN else AsyncInferenceClient()
 
 async def generate_embeddings(strings: list[str]):
-    if not _hf_client:
-        raise RuntimeError("HF_TOKEN is not configured. Cannot generate embeddings.")
-
     # Feature extraction automatically routes to the right HF backend
     result = await _hf_client.feature_extraction(
         strings, 

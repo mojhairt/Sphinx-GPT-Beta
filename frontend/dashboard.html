@@ -5,13 +5,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard | Sphinx-SCA</title>
-    <meta name="description" content="Your personal Sphinx-SCA dashboard — track your solved problems, view activity, and manage your AI math assistant.">
+    <meta name="description"
+        content="Your personal Sphinx-SCA dashboard — track your solved problems, view activity, and manage your AI math assistant.">
     <link rel="icon" type="image/png" href="/logo.png">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
 
     <!-- Theme Initialization Script (Before render) -->
     <script>
@@ -38,16 +40,16 @@
 
         /* Dashboard Sidebar */
         .sidebar {
-            width: 260px;
-            background-color: var(--bg-secondary);
+            width: 280px;
+            background: var(--bg-secondary);
             border-right: 1px solid var(--border-color);
-            padding: var(--space-6) 0;
+            padding: var(--space-8) 0;
             display: flex;
             flex-direction: column;
             position: sticky;
             top: var(--header-height);
             height: calc(100vh - var(--header-height));
-            transition: background-color var(--transition-base), border-color var(--transition-base);
+            z-index: 10;
         }
 
         .sidebar-menu {
@@ -101,6 +103,7 @@
             flex: 1;
             padding: var(--space-10);
             overflow-y: auto;
+            background: radial-gradient(circle at top right, rgba(217, 119, 87, 0.05), transparent 60%);
         }
 
         .dashboard-header {
@@ -156,18 +159,37 @@
         }
 
         .stat-card {
-            background-color: var(--bg-secondary);
+            background: var(--bg-elevated);
             padding: var(--space-6);
             border-radius: var(--radius-xl);
             border: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
-            transition: all var(--transition-fast);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), transparent);
+            opacity: 0.5;
+            transition: opacity 0.3s ease;
         }
 
         .stat-card:hover {
-            box-shadow: var(--shadow-md);
-            border-color: var(--border-hover);
+            transform: translateY(-4px);
+            border-color: rgba(217, 119, 87, 0.3);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2), 0 0 40px rgba(217, 119, 87, 0.05);
+        }
+
+        .stat-card:hover::before {
+            opacity: 1;
         }
 
         .stat-header {
@@ -217,9 +239,9 @@
 
         /* Recent Activity Section */
         .recent-section {
-            background-color: var(--bg-secondary);
+            background: var(--bg-elevated);
             border-radius: var(--radius-xl);
-            padding: var(--space-7);
+            padding: var(--space-8);
             border: 1px solid var(--border-color);
         }
 
@@ -335,7 +357,10 @@
             .sidebar-overlay {
                 display: none;
                 position: fixed;
-                top: 0; left: 0; right: 0; bottom: 0;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
                 background: rgba(0, 0, 0, 0.5);
                 backdrop-filter: blur(4px);
                 z-index: 999;
@@ -392,6 +417,124 @@
                 font-size: 20px;
             }
         }
+
+        .saved-solutions-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-4);
+        }
+
+        .saved-solutions-modal-overlay.active {
+            display: flex;
+        }
+
+        .saved-solutions-modal-content {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-2xl);
+            width: 100%;
+            max-width: 600px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: var(--shadow-2xl);
+            animation: modalPopIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .saved-solutions-header {
+            padding: var(--space-5) var(--space-6);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .saved-solutions-header h2 {
+            font-size: var(--font-h3);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .close-saved-modal-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: var(--radius-full);
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .close-saved-modal-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .saved-solutions-body {
+            padding: var(--space-6);
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .saved-solution-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--space-4);
+            margin-bottom: var(--space-4);
+            position: relative;
+        }
+
+        .saved-solution-text {
+            font-size: var(--font-body);
+            color: var(--text-primary);
+            margin-bottom: var(--space-3);
+            white-space: pre-wrap;
+        }
+
+        .saved-solution-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-top: 1px solid var(--border-color);
+            padding-top: var(--space-3);
+        }
+
+        .saved-solution-date {
+            font-size: var(--font-xs);
+            color: var(--text-muted);
+        }
+
+        .saved-solution-delete-btn {
+            background: transparent;
+            border: none;
+            color: #ef4444;
+            font-size: var(--font-small);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 500;
+        }
+
+        .saved-solution-delete-btn:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 
@@ -416,8 +559,7 @@
             <button class="nav-theme-toggle" id="theme-toggle-btn" title="Toggle Dark/Light Mode">
                 <span class="material-symbols-outlined theme-icon">dark_mode</span>
             </button>
-            <a href="/" class="nav-link">Home</a>
-            <a href="about.html" class="nav-link">About</a>
+
             <a href="login.html" class="nav-link" id="nav-login-btn">Log in</a>
 
             <div class="profile-container" id="nav-profile-container">
@@ -472,30 +614,14 @@
                     </ul>
                 </li>
                 <li class="sidebar-item">
-                    <a href="#" class="sidebar-link">
+                    <a href="#" class="sidebar-link" id="saved-solutions-btn">
                         <span class="material-symbols-outlined">folder</span>
                         Saved Solutions
                     </a>
                 </li>
             </ul>
 
-            <div class="sidebar-divider"></div>
-            <div class="sidebar-title">Tools</div>
 
-            <ul class="sidebar-menu">
-                <li class="sidebar-item">
-                    <a href="#" class="sidebar-link">
-                        <span class="material-symbols-outlined">calculate</span>
-                        Advanced Calculator
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a href="#" class="sidebar-link">
-                        <span class="material-symbols-outlined">functions</span>
-                        Formula Reference
-                    </a>
-                </li>
-            </ul>
 
             <div class="sidebar-divider"></div>
             <div class="sidebar-title">Settings</div>
@@ -546,7 +672,7 @@
                             <span class="material-symbols-outlined">bookmark</span>
                         </div>
                     </div>
-                    <div class="stat-value">0</div>
+                    <div class="stat-value" id="saved-notes-stat">0</div>
                 </div>
 
                 <div class="stat-card">
@@ -556,7 +682,7 @@
                             <span class="material-symbols-outlined">local_fire_department</span>
                         </div>
                     </div>
-                    <div class="stat-value">0 Days</div>
+                    <div class="stat-value" id="current-streak-stat">0 Days</div>
                 </div>
             </div>
 
@@ -582,6 +708,21 @@
             <p class="coming-soon-text">We are working hard to bring this feature to you. It will be available in the
                 next major update.</p>
             <button class="coming-soon-btn" id="close-coming-soon">Got It</button>
+        </div>
+    </div>
+
+    <!-- Saved Solutions Modal -->
+    <div class="saved-solutions-modal-overlay" id="saved-solutions-modal">
+        <div class="saved-solutions-modal-content">
+            <div class="saved-solutions-header">
+                <h2>Saved Solutions</h2>
+                <button class="close-saved-modal-btn" id="close-saved-solutions">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="saved-solutions-body" id="saved-solutions-list">
+                <!-- Saved solutions render here -->
+            </div>
         </div>
     </div>
 
@@ -666,11 +807,55 @@
                     const uniqueSessions = Array.from(sessionsMap.values()).sort((a, b) =>
                         new Date(b.created_at) - new Date(a.created_at)
                     );
+                    //khairy update from 663 to 674
+                    //(اضافة خاصية محادثات مود المذاكرة + خاصية الملاحظات والتاسكات )
+
+                    // Read study session registry to distinguish Study Mode vs normal chat
+                    let studySessionMap = {};
+                    try { studySessionMap = JSON.parse(localStorage.getItem('study_sessions') || '{}'); } catch (e) { }
+
+                    const studySessions = uniqueSessions.filter(s => studySessionMap[s.session_id] === 'study');
 
                     const problemsSolvedStat = document.getElementById('problems-solved-stat');
                     if (problemsSolvedStat) {
-                        problemsSolvedStat.textContent = uniqueSessions.length;
+                        problemsSolvedStat.textContent = studySessions.length;
                     }
+
+                    // Calculate Saved Notes
+                    let totalNotes = 0;
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('study-notes-blocks-')) {
+                            try {
+                                const notesArr = JSON.parse(localStorage.getItem(key));
+                                if (Array.isArray(notesArr)) totalNotes += notesArr.length;
+                            } catch (e) { }
+                        }
+                    }
+                    const savedNotesStat = document.getElementById('saved-notes-stat');
+                    if (savedNotesStat) savedNotesStat.textContent = totalNotes;
+
+                    // Calculate Streak based on dates
+                    let streakDays = 0;
+                    const studyDates = new Set(studySessions.map(s => {
+                        const d = new Date(s.created_at);
+                        d.setHours(0, 0, 0, 0);
+                        return d.getTime();
+                    }));
+
+                    let dateToCheck = new Date();
+                    dateToCheck.setHours(0, 0, 0, 0);
+
+                    if (!studyDates.has(dateToCheck.getTime())) {
+                        dateToCheck.setDate(dateToCheck.getDate() - 1);
+                    }
+                    while (studyDates.has(dateToCheck.getTime())) {
+                        streakDays++;
+                        dateToCheck.setDate(dateToCheck.getDate() - 1);
+                    }
+
+                    const currentStreakStat = document.getElementById('current-streak-stat');
+                    if (currentStreakStat) currentStreakStat.textContent = `${streakDays} Days`;
 
                     const recentActivityList = document.getElementById('recent-activity-list');
                     const chatHistoryList = document.getElementById('chat-history-list');
@@ -703,14 +888,28 @@
                             }
 
                             if (index < 15 && chatHistoryList) {
+                                //khairy update from 719 and  722 to 731
+                                //(اضافة خاصية محادثات مود المذاكرة + خاصية الملاحظات والتاسكات )
+                                const isStudy = studySessionMap[sessionMsg.session_id] === 'study';
                                 const liHistory = document.createElement('li');
                                 liHistory.className = 'sidebar-item';
-                                liHistory.innerHTML = `
-                                    <a href="/?session=${sessionMsg.session_id}" class="sidebar-link" style="padding: 8px 16px; font-size: 13px;">
-                                        <span class="material-symbols-outlined" style="font-size: 16px;">forum</span>
-                                        <span class="history-content-text" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; min-width: 0;"></span>
-                                    </a>
-                                `;
+                                if (isStudy) {
+                                    // Study Mode session → always go to study-mode.html
+                                    liHistory.innerHTML = `
+                                        <a href="/study-mode.html?session=${sessionMsg.session_id}" class="sidebar-link" style="padding: 8px 16px; font-size: 13px;">
+                                            <span class="material-symbols-outlined" style="font-size: 16px; color: var(--primary);">school</span>
+                                            <span class="history-content-text" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; min-width: 0;"></span>
+                                        </a>
+                                    `;
+                                } else {
+                                    // Normal chat → open in main page
+                                    liHistory.innerHTML = `
+                                        <a href="/?session=${sessionMsg.session_id}" class="sidebar-link" style="padding: 8px 16px; font-size: 13px;">
+                                            <span class="material-symbols-outlined" style="font-size: 16px;">forum</span>
+                                            <span class="history-content-text" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; min-width: 0;"></span>
+                                        </a>
+                                    `;
+                                }
                                 liHistory.querySelector('.history-content-text').textContent = sessionMsg.content;
                                 chatHistoryList.appendChild(liHistory);
                             }
@@ -782,7 +981,7 @@
             const comingSoonModal = document.getElementById('coming-soon-modal');
             const closeComingSoonBtn = document.getElementById('close-coming-soon');
 
-            const unusedLinks = document.querySelectorAll('a[href="#"]:not(#logout-btn):not(.sidebar-link.active)');
+            const unusedLinks = document.querySelectorAll('a[href="#"]:not(#logout-btn):not(.sidebar-link.active):not(#saved-solutions-btn)');
 
             function showComingSoon(e) {
                 e.preventDefault();
@@ -800,6 +999,61 @@
                     comingSoonModal.style.display = 'none';
                 });
             }
+
+            // Saved Solutions Modal Logic
+            const savedSolutionsBtn = document.getElementById('saved-solutions-btn');
+            const savedSolutionsModal = document.getElementById('saved-solutions-modal');
+            const closeSavedSolutionsBtn = document.getElementById('close-saved-solutions');
+            const savedSolutionsList = document.getElementById('saved-solutions-list');
+
+            function renderSavedSolutions() {
+                let saved = [];
+                try { saved = JSON.parse(localStorage.getItem('study_saved_solutions') || '[]'); } catch (e) { }
+
+                if (saved.length === 0) {
+                    savedSolutionsList.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px;">No saved solutions yet. Go to Study Mode and like an AI response to save it!</div>';
+                    return;
+                }
+
+                savedSolutionsList.innerHTML = saved.map(item => {
+                    const dateStr = item.date ? new Date(item.date).toLocaleDateString() + ' at ' + new Date(item.date).toLocaleTimeString() : '';
+                    return `
+                        <div class="saved-solution-card" data-id="${item.id}">
+                            <div class="saved-solution-text">${item.content.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+                            <div class="saved-solution-footer">
+                                <span class="saved-solution-date">${dateStr}</span>
+                                <button class="saved-solution-delete-btn" onclick="document.dispatchEvent(new CustomEvent('delete-solution', {detail: '${item.id}'}))">
+                                    <span class="material-symbols-outlined" style="font-size:16px;">delete</span> Delete
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            document.addEventListener('delete-solution', (e) => {
+                const id = e.detail;
+                let saved = [];
+                try { saved = JSON.parse(localStorage.getItem('study_saved_solutions') || '[]'); } catch (e) { }
+                saved = saved.filter(s => s.id !== id);
+                localStorage.setItem('study_saved_solutions', JSON.stringify(saved));
+                renderSavedSolutions();
+            });
+
+            if (savedSolutionsBtn) {
+                savedSolutionsBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    renderSavedSolutions();
+                    savedSolutionsModal.classList.add('active');
+                });
+            }
+
+            if (closeSavedSolutionsBtn) {
+                closeSavedSolutionsBtn.addEventListener('click', () => {
+                    savedSolutionsModal.classList.remove('active');
+                });
+            }
+
         });
     </script>
 
