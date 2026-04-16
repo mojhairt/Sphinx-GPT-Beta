@@ -16,3 +16,4 @@ langgraph
 typing_extensions
 dspy-ai
 huggingface-hub
+tavily-python
