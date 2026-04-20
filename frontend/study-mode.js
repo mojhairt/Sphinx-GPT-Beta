@@ -1039,6 +1039,13 @@ async function handleStudySend(text, imageUrl, type) {
             state.activeStudySessionId = startData.session_id;
             state.studyDifficulty = startData.difficulty || 'medium';
 
+            // ✅ FIX: If the backend generated a specific math problem (the user
+            // typed something like "give me a problem"), update studyOriginalQuestion
+            // with the actual generated problem so hint/solve work correctly.
+            if (startData.session_question && startData.session_question !== text) {
+                state.studyOriginalQuestion = startData.session_question;
+            }
+
             // FIX 1: Use extractStartContent to combine concept + socratic
             const content = extractStartContent(startData);
             aiTextDiv.innerHTML = formatMessage(content || 'Ready! Take a look at the problem. 🎯');

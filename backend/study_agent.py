@@ -607,9 +607,19 @@ def _dispatch_tool(tool_name: str, arguments: dict, context: dict) -> dict:
     logger.info(f"[Agent] Calling tool: {tool_name} | args: {list(arguments.keys())}")
 
     if tool_name == "explain_concept":
+        # ✅ FIX: If the LLM generated a specific math problem (different from
+        # the user's generic request like "give me a problem"), store it in the
+        # session so that subsequent hint/solve calls use the ACTUAL problem.
+        llm_question = arguments.get("question", question)
+        if llm_question and llm_question != question:
+            try:
+                update_session(sid, {"question": llm_question})
+                logger.info("[Agent] Updated session question: %s", llm_question[:80])
+            except Exception:
+                pass
         return _tool_explain_concept(
             sid,
-            arguments.get("question", question),
+            llm_question,
             arguments.get("branch", branch),
             arguments.get("difficulty", "medium"),
             memory_ctx,
@@ -882,8 +892,6 @@ SESSION STATE:
         except Exception:
             difficulty = "medium"
 
-        # ✅ FIX (M-04): Removed empty update_session(session_id, {}) — it did nothing
-
         context = {
             "session_id": session_id,
             "user_id":    user_id,
@@ -900,20 +908,81 @@ SESSION STATE:
         result["session_id"]      = session_id
         result["difficulty"]      = difficulty
         result["hints_remaining"] = self._hints_remaining(session_id)
+
+        # ✅ FIX: Return the session's (possibly updated) question so the
+        # frontend can track the ACTUAL math problem, not the user's generic
+        # request like "give me an algebra problem".
+        session = get_session(session_id)
+        if session:
+            result["session_question"] = session["question"]
+
         return result
 
     async def hint(self, session_id: str, question: str, branch: str,
                    user_id: str = "") -> dict:
-        memory_ctx = await self._get_memory_ctx(user_id, question)
-        context    = {"session_id": session_id, "user_id": user_id,
-                      "question": question, "branch": branch, "memory_ctx": memory_ctx}
-        user_msg   = self._build_user_message(
-            "hint", session_id, question, branch, memory_ctx=memory_ctx
-        )
-        result                    = _run_agent_loop(user_msg, context)
-        result["session_id"]      = session_id
-        result["hints_remaining"] = self._hints_remaining(session_id)
-        return result
+        """Fast path — no agent loop needed.
+
+        FIX: The agent loop was generating new problems instead of hinting
+        about the current one. Root cause: the frontend was sending the
+        user's original input (e.g. "give me a problem") instead of the
+        actual generated problem. By using the session's stored question
+        directly and bypassing the agent loop, we guarantee the hint is
+        always about the correct problem.
+        """
+        session = get_session(session_id)
+        if not session:
+            return {"success": False, "error": "Session not found."}
+
+        # ✅ FIX: Always use the session's question — it may have been updated
+        # by explain_concept to contain the actual generated problem.
+        actual_question = session["question"]
+        actual_branch = session["branch"]
+
+        # Check hint availability
+        if not can_use_hint(session_id):
+            return {
+                "success":          True,
+                "session_id":       session_id,
+                "hint_text":        "💪 You've used all your hints! Try solving it or press Solve for the full solution.",
+                "hints_remaining":  0,
+                "hint_limit_reached": True,
+            }
+
+        # Determine hint number (1-indexed)
+        hint_number = session["hints_used"] + 1
+
+        # Generate hint directly — no agent loop, no hallucination risk
+        # Use 'medium' difficulty to skip the extra classify_difficulty LLM call
+        logger.info("[Hint] session=%s q=%s hint#=%d", session_id, actual_question[:60], hint_number)
+        try:
+            hint_text = study_llm.generate_hint(
+                actual_question, actual_branch, hint_number, "medium"
+            )
+        except Exception as e:
+            logger.error("[Hint] generate_hint failed: %s", e)
+            hint_text = ""
+
+        # Robust fallback — never return empty hint
+        if not hint_text or hint_text.startswith("Error:"):
+            fallback_hints = {
+                1: "💡 Think about what technique or formula applies to this type of problem. What's the first step? 🤔",
+                2: "💡 Try breaking the problem into smaller parts. Which operation should you start with? 👀",
+                3: "💡 You're close! Try working through the first calculation step. What do you get? 💪",
+            }
+            hint_text = fallback_hints.get(hint_number, fallback_hints[1])
+            logger.warning("[Hint] Used fallback hint #%d", hint_number)
+
+        use_hint(session_id)
+        hints_remaining = self._hints_remaining(session_id)
+
+        return {
+            "success":          True,
+            "session_id":       session_id,
+            "hint_text":        hint_text,
+            "hint_level":       hint_number,
+            "hints_remaining":  hints_remaining,
+            "agent_message":    hint_text,
+        }
 
     async def solve(self, session_id: str, question: str, branch: str,
                     user_id: str = "") -> dict:
