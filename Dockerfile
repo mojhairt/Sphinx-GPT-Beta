@@ -12,6 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
 # Copy requirements file (needs to copy the backend folder since it's inside backend/)
 COPY backend/requirements.txt ./backend/
 
+# Install CPU-only PyTorch first to avoid downloading 3GB+ of CUDA libraries
+RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
 # Install the underlying dependencies
 RUN pip install --no-cache-dir -r backend/requirements.txt
 
