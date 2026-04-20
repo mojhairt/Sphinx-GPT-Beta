@@ -571,6 +571,73 @@ body.app-page {
 
 .history-item {
     margin-bottom: 1px;
+    position: relative;
+}
+
+.history-options-btn {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: none;
+    background: var(--bg-secondary);
+    border: none;
+    color: var(--text-muted);
+    border-radius: var(--radius-sm);
+    padding: 2px;
+    cursor: pointer;
+    z-index: 2;
+}
+.history-item:hover .history-options-btn,
+.history-options-btn.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.history-options-btn:hover {
+    color: var(--text-primary);
+}
+
+.history-options-menu {
+    position: absolute;
+    top: calc(100% - 4px);
+    right: 8px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    padding: var(--space-1) 0;
+    min-width: 150px;
+    z-index: 100;
+    display: none;
+    flex-direction: column;
+}
+.history-options-menu.active {
+    display: flex;
+}
+.history-options-menu button {
+    background: transparent;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    color: var(--text-secondary);
+    font-size: var(--font-small);
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+}
+.history-options-menu button:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+}
+.history-options-menu button.delete-btn {
+    color: #ef4444;
+}
+.history-options-menu button.delete-btn:hover {
+    background: rgba(239, 68, 68, 0.05);
 }
 
 .history-link {
@@ -581,6 +648,7 @@ body.app-page {
     color: var(--text-secondary);
     font-size: var(--font-small);
     transition: all var(--transition-fast);
+    padding-right: 32px;
     white-space: nowrap;
     overflow: hidden;
 }

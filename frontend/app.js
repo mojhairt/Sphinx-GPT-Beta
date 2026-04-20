@@ -72,18 +72,38 @@ async function fetchUserData(userId) {
             let studySessionMap = {};
             try { studySessionMap = JSON.parse(localStorage.getItem('study_sessions') || '{}'); } catch (e) { }
 
-            const topSessions = sessions.slice(0, 15);
+            // Read chat session metadata for rename/pin/archive
+            let sessionMeta = {};
+            try { sessionMeta = JSON.parse(localStorage.getItem('chat_session_meta') || '{}'); } catch (e) { }
+
+            // Filter out archived
+            let displaySessions = sessions.filter(s => {
+                const meta = sessionMeta[s.session_id] || {};
+                return !meta.archived;
+            });
+
+            // Sort pinned to top
+            displaySessions.sort((a, b) => {
+                const aPinned = sessionMeta[a.session_id]?.pinned ? 1 : 0;
+                const bPinned = sessionMeta[b.session_id]?.pinned ? 1 : 0;
+                return bPinned - aPinned;
+            });
+
+            const topSessions = displaySessions.slice(0, 15);
 
             if (topSessions.length > 0) {
                 topSessions.forEach((sessionMsg) => {
-                    const isStudy = studySessionMap[sessionMsg.session_id] === 'study';
+                    const sessionId = sessionMsg.session_id;
+                    const meta = sessionMeta[sessionId] || {};
+                    const displayName = meta.name || sessionMsg.content;
+                    const isStudy = studySessionMap[sessionId] === 'study';
                     const li = document.createElement('li');
                     li.className = 'history-item';
 
                     if (isStudy) {
                         // Study Mode session → redirect to study-mode.html
                         li.innerHTML = `
-                            <a href="study-mode.html?session=${sessionMsg.session_id}" class="history-link" data-session-id="${sessionMsg.session_id}">
+                            <a href="study-mode.html?session=${sessionId}" class="history-link" data-session-id="${sessionId}">
                                 <span class="material-symbols-outlined" style="font-size:14px;flex-shrink:0;color:var(--primary);">school</span>
                                 <span class="history-text"></span>
                             </a>
@@ -91,18 +111,108 @@ async function fetchUserData(userId) {
                     } else {
                         // Normal chat → load in-page as before
                         li.innerHTML = `
-                            <a href="#" class="history-link" data-session-id="${sessionMsg.session_id}">
-                                <span class="material-symbols-outlined" style="font-size:14px;flex-shrink:0;">forum</span>
+                            <a href="#" class="history-link" data-session-id="${sessionId}">
+                                <span class="material-symbols-outlined" style="font-size:14px;flex-shrink:0;">${meta.pinned ? 'push_pin' : 'forum'}</span>
                                 <span class="history-text"></span>
                             </a>
                         `;
                         li.querySelector('.history-link').addEventListener('click', (e) => {
                             e.preventDefault();
-                            loadSession(sessionMsg.session_id, sessionMsg.user_id);
+                            loadSession(sessionId, sessionMsg.user_id);
                         });
                     }
 
-                    li.querySelector('.history-text').textContent = sessionMsg.content;
+                    li.querySelector('.history-text').textContent = displayName;
+                    
+                    // Add 3-dots Context Menu
+                    const optsBtn = document.createElement('button');
+                    optsBtn.className = 'history-options-btn';
+                    optsBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">more_horiz</span>';
+                    
+                    const optsMenu = document.createElement('div');
+                    optsMenu.className = 'history-options-menu';
+                    optsMenu.innerHTML = `
+                        <button data-action="share"><span class="material-symbols-outlined">share</span> Share</button>
+                        <button data-action="rename"><span class="material-symbols-outlined">edit</span> Rename</button>
+                        <button data-action="pin"><span class="material-symbols-outlined">push_pin</span> ${meta.pinned ? 'Unpin chat' : 'Pin chat'}</button>
+                        <button data-action="archive"><span class="material-symbols-outlined">archive</span> Archive</button>
+                        <button data-action="delete" class="delete-btn"><span class="material-symbols-outlined">delete</span> Delete</button>
+                    `;
+                    
+                    optsBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        document.querySelectorAll('.history-options-menu.active').forEach(m => {
+                            if (m !== optsMenu) m.classList.remove('active');
+                        });
+                        document.querySelectorAll('.history-options-btn.active').forEach(b => {
+                            if (b !== optsBtn) b.classList.remove('active');
+                        });
+                        optsMenu.classList.toggle('active');
+                        optsBtn.classList.toggle('active');
+                    });
+                    
+                    optsMenu.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        const actionBtn = e.target.closest('button[data-action]');
+                        if (!actionBtn) return;
+                        
+                        const action = actionBtn.dataset.action;
+                        optsMenu.classList.remove('active');
+                        optsBtn.classList.remove('active');
+                        
+                        let currentMeta = {};
+                        try { currentMeta = JSON.parse(localStorage.getItem('chat_session_meta') || '{}'); } catch(err){}
+                        if (!currentMeta[sessionId]) currentMeta[sessionId] = {};
+                        
+                        if (action === 'share') {
+                            const url = new URL(window.location.origin + window.location.pathname);
+                            url.searchParams.set('session', sessionId);
+                            if (isStudy) url.pathname = '/study-mode.html';
+                            if (typeof window.showShareModal === 'function') {
+                                window.showShareModal(url.toString());
+                            }
+                        } else if (action === 'rename') {
+                            const newName = (typeof window.showPromptModal === 'function') 
+                                ? await window.showPromptModal('Enter new chat name:', displayName)
+                                : prompt('Enter new chat name:', displayName);
+                            if (newName && newName.trim()) {
+                                currentMeta[sessionId].name = newName.trim();
+                                localStorage.setItem('chat_session_meta', JSON.stringify(currentMeta));
+                                fetchUserData(userId);
+                            }
+                        } else if (action === 'pin') {
+                            currentMeta[sessionId].pinned = !currentMeta[sessionId].pinned;
+                            localStorage.setItem('chat_session_meta', JSON.stringify(currentMeta));
+                            fetchUserData(userId);
+                        } else if (action === 'archive') {
+                            currentMeta[sessionId].archived = true;
+                            localStorage.setItem('chat_session_meta', JSON.stringify(currentMeta));
+                            fetchUserData(userId);
+                        } else if (action === 'delete') {
+                            const confirmed = (typeof window.showConfirmModal === 'function')
+                                ? await window.showConfirmModal('Are you sure you want to delete this chat session?')
+                                : confirm('Are you sure you want to delete this chat session?');
+                            if (confirmed) {
+                                await supabase.from('messages').delete().eq('session_id', sessionId);
+                                delete currentMeta[sessionId];
+                                localStorage.setItem('chat_session_meta', JSON.stringify(currentMeta));
+                                fetchUserData(userId);
+                                if (appState.currentSessionId === sessionId) {
+                                    appState.currentSessionId = null;
+                                    document.getElementById('chat-messages').innerHTML = '';
+                                    const heroSection = document.querySelector('.hero');
+                                    const chatInterface = document.getElementById('chat-interface');
+                                    if (heroSection) heroSection.style.display = 'flex';
+                                    if (chatInterface) chatInterface.style.display = 'none';
+                                    const floatingWrapper = document.getElementById('floating-search-wrapper');
+                                    if (floatingWrapper) floatingWrapper.style.display = 'none';
+                                }
+                            }
+                        }
+                    });
+                    
+                    li.appendChild(optsBtn);
+                    li.appendChild(optsMenu);
                     sidebarHistoryList.appendChild(li);
                 });
             } else {
@@ -115,6 +225,11 @@ async function fetchUserData(userId) {
         }
     } catch (error) {
         console.error('Error fetching chat history:', error);
+        if (typeof window.showAlertModal === 'function') {
+            window.showAlertModal('Error', 'Could not load chat history.');
+        } else {
+            alert('Could not load chat history.');
+        }
     }
 }
 
@@ -188,6 +303,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     initGraph();
     initImageUpload();
     initChat();
+    
+    // Close context menus on click outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.history-item')) {
+            document.querySelectorAll('.history-options-menu.active').forEach(m => m.classList.remove('active'));
+            document.querySelectorAll('.history-options-btn.active').forEach(b => b.classList.remove('active'));
+        }
+    });
 
     // ── Rotating placeholder for main search input ──
     const mainInput = document.getElementById('main-search-input');
@@ -270,7 +393,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (logoutBtn) {
             logoutBtn.addEventListener('click', async (e) => {
                 e.preventDefault();
-                if (!confirm('Are you sure you want to log out?')) return;
+                const confirmed = (typeof window.showConfirmModal === 'function')
+                    ? await window.showConfirmModal('Are you sure you want to log out?')
+                    : confirm('Are you sure you want to log out?');
+                if (!confirmed) return;
                 await supabase.auth.signOut();
                 window.location.reload();
             });
@@ -312,3 +438,205 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
+window.showShareModal = function(url) {
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0'; overlay.style.left = '0'; overlay.style.right = '0'; overlay.style.bottom = '0';
+    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    overlay.style.backdropFilter = 'blur(4px)';
+    overlay.style.zIndex = '9999';
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+
+    const modal = document.createElement('div');
+    modal.style.backgroundColor = 'var(--bg-elevated)';
+    modal.style.border = '1px solid var(--border-color)';
+    modal.style.borderRadius = 'var(--radius-lg)';
+    modal.style.padding = 'var(--space-4)';
+    modal.style.width = '90%';
+    modal.style.maxWidth = '450px';
+    modal.style.boxShadow = 'var(--shadow-xl)';
+    modal.style.position = 'relative';
+
+    modal.innerHTML = `
+        <button class="close-share" style="position:absolute; top:12px; right:12px; background:transparent; border:none; color:var(--text-secondary); cursor:pointer;">
+            <span class="material-symbols-outlined">close</span>
+        </button>
+        <h3 style="margin:0 0 16px 0; font-size:18px; color:var(--text-primary); font-weight:600;">Shareable public link</h3>
+        <div style="display:flex; align-items:center; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-full); padding:4px 4px 4px 16px; margin-bottom:16px;">
+            <div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-secondary); font-size:14px; user-select:all;">
+                ${url}
+            </div>
+            <button class="copy-share-btn" style="background:var(--primary); color:#fff; border:none; padding:8px 16px; border-radius:var(--radius-full); font-weight:500; font-size:14px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s;">
+                <span class="material-symbols-outlined" style="font-size:18px;">content_copy</span> Copy link
+            </button>
+        </div>
+        <div style="display:flex; gap:8px; color:var(--text-muted); font-size:12px; line-height:1.4;">
+            <span class="material-symbols-outlined" style="font-size:16px; flex-shrink:0;">info</span>
+            <p style="margin:0;">Public links can be reshared. Share responsibly, delete anytime. If sharing with third-parties, their policies apply.</p>
+        </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('.close-share').addEventListener('click', () => {
+        document.body.removeChild(overlay);
+    });
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) document.body.removeChild(overlay);
+    });
+
+    const copyBtn = overlay.querySelector('.copy-share-btn');
+    copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(url).then(() => {
+            copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;">check</span> Copied!';
+            copyBtn.style.backgroundColor = '#10b981';
+            setTimeout(() => {
+                copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;">content_copy</span> Copy link';
+                copyBtn.style.backgroundColor = 'var(--primary)';
+            }, 2000);
+        });
+    });
+};
+
+window.showConfirmModal = function(message) {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0'; overlay.style.left = '0'; overlay.style.right = '0'; overlay.style.bottom = '0';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        overlay.style.backdropFilter = 'blur(4px)';
+        overlay.style.zIndex = '9999';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+
+        const modal = document.createElement('div');
+        modal.style.backgroundColor = 'var(--bg-elevated)';
+        modal.style.border = '1px solid var(--border-color)';
+        modal.style.borderRadius = 'var(--radius-lg)';
+        modal.style.padding = 'var(--space-4)';
+        modal.style.width = '90%';
+        modal.style.maxWidth = '400px';
+        modal.style.boxShadow = 'var(--shadow-xl)';
+        modal.style.position = 'relative';
+
+        modal.innerHTML = `
+            <h3 style="margin:0 0 12px 0; font-size:18px; color:var(--text-primary); font-weight:600;">Confirm Action</h3>
+            <p style="margin:0 0 20px 0; color:var(--text-secondary); font-size:14px; line-height:1.5;">${message}</p>
+            <div style="display:flex; justify-content:flex-end; gap:12px;">
+                <button class="cancel-btn" style="background:transparent; border:1px solid var(--border-color); color:var(--text-primary); padding:8px 16px; border-radius:var(--radius-md); font-size:14px; cursor:pointer;">Cancel</button>
+                <button class="confirm-btn" style="background:#ef4444; color:#fff; border:none; padding:8px 16px; border-radius:var(--radius-md); font-size:14px; cursor:pointer; min-width:80px;">Delete</button>
+            </div>
+        `;
+
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        const close = (result) => {
+            document.body.removeChild(overlay);
+            resolve(result);
+        };
+
+        overlay.querySelector('.cancel-btn').addEventListener('click', () => close(false));
+        overlay.querySelector('.confirm-btn').addEventListener('click', () => close(true));
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(false); });
+    });
+};
+
+window.showPromptModal = function(title, defaultValue) {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0'; overlay.style.left = '0'; overlay.style.right = '0'; overlay.style.bottom = '0';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        overlay.style.backdropFilter = 'blur(4px)';
+        overlay.style.zIndex = '9999';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+
+        const modal = document.createElement('div');
+        modal.style.backgroundColor = 'var(--bg-elevated)';
+        modal.style.border = '1px solid var(--border-color)';
+        modal.style.borderRadius = 'var(--radius-lg)';
+        modal.style.padding = 'var(--space-4)';
+        modal.style.width = '90%';
+        modal.style.maxWidth = '400px';
+        modal.style.boxShadow = 'var(--shadow-xl)';
+        modal.style.position = 'relative';
+
+        modal.innerHTML = `
+            <h3 style="margin:0 0 16px 0; font-size:18px; color:var(--text-primary); font-weight:600;">${title}</h3>
+            <input type="text" class="prompt-input" value="${defaultValue || ''}" style="width:100%; box-sizing:border-box; background:var(--bg-secondary); border:1px solid var(--border-color); color:var(--text-primary); padding:10px 14px; border-radius:var(--radius-md); font-size:14px; margin-bottom:20px; outline:none;" />
+            <div style="display:flex; justify-content:flex-end; gap:12px;">
+                <button class="cancel-btn" style="background:transparent; border:1px solid var(--border-color); color:var(--text-primary); padding:8px 16px; border-radius:var(--radius-md); font-size:14px; cursor:pointer;">Cancel</button>
+                <button class="confirm-btn" style="background:var(--primary); color:#fff; border:none; padding:8px 16px; border-radius:var(--radius-md); font-size:14px; cursor:pointer; min-width:80px;">Save</button>
+            </div>
+        `;
+
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        const input = overlay.querySelector('.prompt-input');
+        input.focus();
+        input.select();
+
+        const close = (result) => {
+            document.body.removeChild(overlay);
+            resolve(result);
+        };
+
+        overlay.querySelector('.cancel-btn').addEventListener('click', () => close(null));
+        overlay.querySelector('.confirm-btn').addEventListener('click', () => close(input.value));
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') close(input.value);
+            if (e.key === 'Escape') close(null);
+        });
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(null); });
+    });
+};
+
+window.showAlertModal = function(title, message) {
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0'; overlay.style.left = '0'; overlay.style.right = '0'; overlay.style.bottom = '0';
+    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    overlay.style.backdropFilter = 'blur(4px)';
+    overlay.style.zIndex = '9999';
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+
+    const modal = document.createElement('div');
+    modal.style.backgroundColor = 'var(--bg-elevated)';
+    modal.style.border = '1px solid var(--border-color)';
+    modal.style.borderRadius = 'var(--radius-lg)';
+    modal.style.padding = 'var(--space-5)';
+    modal.style.width = '90%';
+    modal.style.maxWidth = '400px';
+    modal.style.boxShadow = 'var(--shadow-xl)';
+    modal.style.position = 'relative';
+    modal.style.textAlign = 'center';
+
+    modal.innerHTML = `
+        <div style="margin-bottom:16px;">
+            <span class="material-symbols-outlined" style="font-size:48px; color:var(--primary); opacity:0.8;">info</span>
+        </div>
+        <h3 style="margin:0 0 12px 0; font-size:18px; color:var(--text-primary); font-weight:600;">${title}</h3>
+        <p style="margin:0 0 24px 0; color:var(--text-secondary); font-size:14px; line-height:1.5;">${message}</p>
+        <button class="close-alert-btn" style="background:var(--primary); color:#fff; border:none; padding:10px 24px; border-radius:var(--radius-md); font-size:14px; font-weight:600; cursor:pointer; width:100%; transition:all 0.2s;">OK</button>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('.close-alert-btn').addEventListener('click', () => {
+        document.body.removeChild(overlay);
+    });
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) document.body.removeChild(overlay);
+    });
+};

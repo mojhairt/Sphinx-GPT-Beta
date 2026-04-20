@@ -84,7 +84,11 @@ function fileToDataUrlWithProgress(file, onProgress) {
 /** Show an image preview and read the file into a base64 data URL. */
 export async function showImagePreview(file) {
     if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
-        alert('Please upload an image or PDF file.');
+        if (typeof window.showAlertModal === 'function') {
+            window.showAlertModal('Invalid File', 'Please upload an image or PDF file.');
+        } else {
+            alert('Please upload an image or PDF file.');
+        }
         return;
     }
 
