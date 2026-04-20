@@ -232,12 +232,10 @@ STUDY_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "question":        {"type": "string", "description": "The math problem"},
-                    "branch":          {"type": "string", "description": "Math branch"},
                     "attempt":         {"type": "string", "description": "Student's last attempt (empty if none yet)"},
                     "acknowledgement": {"type": "string", "description": "Brief, warm acknowledgement of the student's attempt (if any)"},
                 },
-                "required": ["question", "branch"],
+                "required": [],
             },
         },
     },
@@ -257,13 +255,11 @@ STUDY_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "question":      {"type": "string",  "description": "The math problem"},
-                    "branch":        {"type": "string",  "description": "Math branch"},
                     "difficulty":    {"type": "string",  "description": "easy | medium | hard"},
                     "hint_number":   {"type": "integer", "description": "Which hint to give: 1, 2, or 3"},
                     "micro_question":{"type": "string",  "description": "A short follow-up question to keep the student engaged"},
                 },
-                "required": ["question", "branch", "difficulty", "hint_number"],
+                "required": ["difficulty", "hint_number"],
             },
         },
     },
@@ -277,7 +273,6 @@ STUDY_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "question":         {"type": "string",  "description": "The math problem"},
                     "correct_answer":   {"type": "string",  "description": "The correct answer"},
                     "student_answer":   {"type": "string",  "description": "The student's submitted answer"},
                     "attempt_count":    {"type": "integer", "description": "How many attempts the student has made so far"},
@@ -299,7 +294,7 @@ STUDY_TOOLS = [
                         "description": "Category of the error (or 'none' if correct)",
                     },
                 },
-                "required": ["question", "correct_answer", "student_answer"],
+                "required": ["correct_answer", "student_answer"],
             },
         },
     },
@@ -313,8 +308,6 @@ STUDY_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "question":         {"type": "string", "description": "The math problem"},
-                    "branch":           {"type": "string", "description": "Math branch"},
                     "difficulty":       {"type": "string", "description": "easy | medium | hard"},
                     "key_insights": {
                         "type": "array",
@@ -323,7 +316,7 @@ STUDY_TOOLS = [
                     },
                     "giveup_triggered": {"type": "boolean", "description": "True if student explicitly gave up; False if auto-triggered"},
                 },
-                "required": ["question", "branch", "difficulty"],
+                "required": ["difficulty"],
             },
         },
     },
@@ -762,7 +755,12 @@ def _run_agent_loop(user_message: str, context: dict) -> dict:
             )
         except Exception as e:
             logger.error("[Agent] LLM call failed: %s", e)
-            return {"success": False, "error": str(e)}
+            error_str = str(e).lower()
+            if "failed to parse" in error_str or "parseerror" in error_str or "400" in error_str:
+                msg = "🚧 I encountered a formatting error while solving the problem (often due to complex math symbols). Please try clicking Solve again, or modifying the problem statement slightly."
+            else:
+                msg = "I encountered an error. Please try again!"
+            return {"success": False, "error": msg}
 
         assistant_msg = completion.choices[0].message
         messages.append(assistant_msg.model_dump(exclude_none=True))
