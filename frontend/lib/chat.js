@@ -406,10 +406,11 @@ function handleAiAction(btn) {
         // via the data-reply-to-user-id attribute
         const linkedUserId = msgEl?.dataset?.replyToUserId;
         let prompt = null;
+        let userMsgEl = null;
 
         if (linkedUserId) {
             // Find the user message element with this messageId
-            const userMsgEl = _chatMessages.querySelector(`.user-message[data-message-id="${linkedUserId}"]`);
+            userMsgEl = _chatMessages.querySelector(`.user-message[data-message-id="${linkedUserId}"]`);
             prompt = userMsgEl?.querySelector('.text-body')?.innerText;
         }
 
@@ -421,13 +422,31 @@ function handleAiAction(btn) {
         // Fallback: last user message
         if (!prompt) {
             const userMessages = _chatMessages.querySelectorAll('.user-message');
-            prompt = userMessages[userMessages.length - 1]?.querySelector('.text-body')?.innerText;
+            userMsgEl = userMessages[userMessages.length - 1];
+            prompt = userMsgEl?.querySelector('.text-body')?.innerText;
         }
 
         if (prompt) {
-            // Remove the current AI response
-            msgEl.remove();
-            const ci = document.getElementById('chat-search-input');
+            // Remove the user message and all subsequent messages
+            if (userMsgEl) {
+                let next = userMsgEl.nextElementSibling;
+                while (next) {
+                    const toRemove = next;
+                    next = next.nextElementSibling;
+                    toRemove.remove();
+                }
+                userMsgEl.remove();
+            } else {
+                let next = msgEl.nextElementSibling;
+                while (next) {
+                    const toRemove = next;
+                    next = next.nextElementSibling;
+                    toRemove.remove();
+                }
+                if (msgEl.parentNode) msgEl.remove();
+            }
+
+            const ci = document.getElementById('chat-search-input') || document.getElementById('main-search-input');
             if (ci) ci.value = prompt;
             handleSend();
         }
@@ -510,6 +529,7 @@ function handleUserAction(btn) {
                 next = next.nextElementSibling;
                 toRemove.remove();
             }
+            msgEl.remove();
 
             // Resend with new text
             const ci = document.getElementById('chat-search-input') || document.getElementById('main-search-input');
@@ -521,6 +541,14 @@ function handleUserAction(btn) {
         // ── RESEND: Just resend the same message ──
         const text = msgContent?.querySelector('.text-body')?.textContent;
         if (!text) return;
+
+        let next = msgEl.nextElementSibling;
+        while (next) {
+            const toRemove = next;
+            next = next.nextElementSibling;
+            toRemove.remove();
+        }
+        msgEl.remove();
 
         const ci = document.getElementById('chat-search-input') || document.getElementById('main-search-input');
         if (ci) ci.value = text;

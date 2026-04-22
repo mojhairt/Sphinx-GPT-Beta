@@ -45,7 +45,7 @@ function renderSearchSources(msgDiv, data) {
     html += '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
     data.sources.forEach(src => {
         let domain = '';
-        try { domain = new URL(src.url).hostname.replace('www.', ''); } catch(e){}
+        try { domain = new URL(src.url).hostname.replace('www.', ''); } catch (e) { }
         html += `<a href="${src.url}" target="_blank" rel="noopener" style="display:flex;flex-direction:column;padding:8px 12px;background:var(--bg-secondary, #1a1a2e);border:1px solid var(--border-color, #333);border-radius:8px;text-decoration:none;max-width:200px;transition:all 0.2s;cursor:pointer;" onmouseover="this.style.borderColor='var(--primary, #e94560)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--border-color, #333)';this.style.transform=''"><span style="font-size:13px;color:var(--text-primary, #eee);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${src.title}</span><span style="font-size:11px;color:var(--text-secondary, #888);">${domain}</span></a>`;
     });
     html += '</div></div>';
@@ -309,19 +309,19 @@ async function fetchHistory(userId) {
             const sessionId = session.session_id;
             const meta = sessionMeta[sessionId] || {};
             const displayName = meta.name || session.content;
-            
+
             const li = document.createElement('li');
             li.className = 'history-item';
-            
+
             li.innerHTML = `<a href="#" class="history-link" data-id="${sessionId}"><span class="material-symbols-outlined" style="font-size:14px;flex-shrink:0;">${meta.pinned ? 'push_pin' : 'school'}</span><span class="history-text"></span></a>`;
             li.querySelector('.history-link').addEventListener('click', (e) => { e.preventDefault(); loadSession(sessionId); });
             li.querySelector('.history-text').textContent = displayName;
-            
+
             // Add 3-dots Context Menu
             const optsBtn = document.createElement('button');
             optsBtn.className = 'history-options-btn';
             optsBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">more_horiz</span>';
-            
+
             const optsMenu = document.createElement('div');
             optsMenu.className = 'history-options-menu';
             optsMenu.innerHTML = `
@@ -331,7 +331,7 @@ async function fetchHistory(userId) {
                 <button data-action="archive"><span class="material-symbols-outlined">archive</span> Archive</button>
                 <button data-action="delete" class="delete-btn"><span class="material-symbols-outlined">delete</span> Delete</button>
             `;
-            
+
             optsBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 document.querySelectorAll('.history-options-menu.active').forEach(m => {
@@ -343,20 +343,20 @@ async function fetchHistory(userId) {
                 optsMenu.classList.toggle('active');
                 optsBtn.classList.toggle('active');
             });
-            
+
             optsMenu.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 const actionBtn = e.target.closest('button[data-action]');
                 if (!actionBtn) return;
-                
+
                 const action = actionBtn.dataset.action;
                 optsMenu.classList.remove('active');
                 optsBtn.classList.remove('active');
-                
+
                 let currentMeta = {};
-                try { currentMeta = JSON.parse(localStorage.getItem('chat_session_meta') || '{}'); } catch(err){}
+                try { currentMeta = JSON.parse(localStorage.getItem('chat_session_meta') || '{}'); } catch (err) { }
                 if (!currentMeta[sessionId]) currentMeta[sessionId] = {};
-                
+
                 if (action === 'share') {
                     const url = new URL(window.location.origin + window.location.pathname);
                     url.searchParams.set('session', sessionId);
@@ -364,7 +364,7 @@ async function fetchHistory(userId) {
                         window.showShareModal(url.toString());
                     }
                 } else if (action === 'rename') {
-                    const newName = (typeof window.showPromptModal === 'function') 
+                    const newName = (typeof window.showPromptModal === 'function')
                         ? await window.showPromptModal('Enter new chat name:', displayName)
                         : prompt('Enter new chat name:', displayName);
                     if (newName && newName.trim()) {
@@ -401,7 +401,7 @@ async function fetchHistory(userId) {
                     }
                 }
             });
-            
+
             li.appendChild(optsBtn);
             li.appendChild(optsMenu);
             historyList.appendChild(li);
@@ -752,6 +752,17 @@ function bindStudyChatActions() {
         } else if (action === 'regenerate') {
             const ci = $('chat-search-input');
             if (ci && state.studyOriginalQuestion) {
+                let prev = msgEl.previousElementSibling;
+                if (prev && prev.classList.contains('user-message')) {
+                    let next = prev.nextElementSibling;
+                    while (next) { const toRemove = next; next = next.nextElementSibling; toRemove.remove(); }
+                    prev.remove();
+                } else {
+                    let next = msgEl.nextElementSibling;
+                    while (next) { const toRemove = next; next = next.nextElementSibling; toRemove.remove(); }
+                    if (msgEl.parentNode) msgEl.remove();
+                }
+
                 ci.value = state.studyOriginalQuestion;
                 handleSend('chat');
             }
@@ -830,11 +841,20 @@ function bindStudyChatActions() {
                 if (ci) ci.value = newText;
                 let next = msgEl.nextElementSibling;
                 while (next) { const toRemove = next; next = next.nextElementSibling; toRemove.remove(); }
+                msgEl.remove();
                 handleSend('chat');
             });
         } else if (action === 'resend-user') {
             const text = msgContent?.querySelector('.text-body')?.textContent;
-            if (text) { const ci = $('chat-search-input'); if (ci) ci.value = text; handleSend('chat'); }
+            if (text) {
+                let next = msgEl.nextElementSibling;
+                while (next) { const toRemove = next; next = next.nextElementSibling; toRemove.remove(); }
+                msgEl.remove();
+
+                const ci = $('chat-search-input');
+                if (ci) ci.value = text;
+                handleSend('chat');
+            }
         }
     });
 }
@@ -1816,16 +1836,16 @@ function initNotes() {
     }
     $('note-add-btn')?.addEventListener('click', () => addNote());
     $('note-input')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') addNote(); });
-    $('clear-notes-btn')?.addEventListener('click', async () => { 
+    $('clear-notes-btn')?.addEventListener('click', async () => {
         const confirmed = (typeof window.showConfirmModal === 'function')
             ? await window.showConfirmModal('Clear all notes?')
             : confirm('Clear all notes?');
-            
-        if (confirmed) { 
-            state.notes = []; 
-            saveNotes(); 
-            renderNotes(); 
-        } 
+
+        if (confirmed) {
+            state.notes = [];
+            saveNotes();
+            renderNotes();
+        }
     });
 }
 
@@ -1865,10 +1885,10 @@ function startTimer() {
         if (state.isFreeTimer) { state.freeTimerElapsed++; updateTimerUI(); }
         else {
             if (state.timeRemaining > 0) { state.timeRemaining--; updateTimerUI(); }
-            else { 
-                clearInterval(state.timerInterval); 
-                state.isRunning = false; 
-                $('play-icon').textContent = 'play_arrow'; 
+            else {
+                clearInterval(state.timerInterval);
+                state.isRunning = false;
+                $('play-icon').textContent = 'play_arrow';
                 if (typeof window.showAlertModal === 'function') {
                     window.showAlertModal('Timer Finished', 'Time is up! Take a break.');
                 } else {
@@ -1936,28 +1956,28 @@ if (document.readyState === 'loading') {
 }
 
 if (typeof window.showShareModal === 'undefined') {
-window.showShareModal = function(url) {
-    const overlay = document.createElement('div');
-    overlay.style.position = 'fixed';
-    overlay.style.top = '0'; overlay.style.left = '0'; overlay.style.right = '0'; overlay.style.bottom = '0';
-    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-    overlay.style.backdropFilter = 'blur(4px)';
-    overlay.style.zIndex = '9999';
-    overlay.style.display = 'flex';
-    overlay.style.alignItems = 'center';
-    overlay.style.justifyContent = 'center';
+    window.showShareModal = function (url) {
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0'; overlay.style.left = '0'; overlay.style.right = '0'; overlay.style.bottom = '0';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        overlay.style.backdropFilter = 'blur(4px)';
+        overlay.style.zIndex = '9999';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
 
-    const modal = document.createElement('div');
-    modal.style.backgroundColor = 'var(--bg-elevated)';
-    modal.style.border = '1px solid var(--border-color)';
-    modal.style.borderRadius = 'var(--radius-lg)';
-    modal.style.padding = 'var(--space-4)';
-    modal.style.width = '90%';
-    modal.style.maxWidth = '450px';
-    modal.style.boxShadow = 'var(--shadow-xl)';
-    modal.style.position = 'relative';
+        const modal = document.createElement('div');
+        modal.style.backgroundColor = 'var(--bg-elevated)';
+        modal.style.border = '1px solid var(--border-color)';
+        modal.style.borderRadius = 'var(--radius-lg)';
+        modal.style.padding = 'var(--space-4)';
+        modal.style.width = '90%';
+        modal.style.maxWidth = '450px';
+        modal.style.boxShadow = 'var(--shadow-xl)';
+        modal.style.position = 'relative';
 
-    modal.innerHTML = `
+        modal.innerHTML = `
         <button class="close-share" style="position:absolute; top:12px; right:12px; background:transparent; border:none; color:var(--text-secondary); cursor:pointer;">
             <span class="material-symbols-outlined">close</span>
         </button>
@@ -1976,54 +1996,54 @@ window.showShareModal = function(url) {
         </div>
     `;
 
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
 
-    overlay.querySelector('.close-share').addEventListener('click', () => {
-        document.body.removeChild(overlay);
-    });
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) document.body.removeChild(overlay);
-    });
-
-    const copyBtn = overlay.querySelector('.copy-share-btn');
-    copyBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(url).then(() => {
-            copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;">check</span> Copied!';
-            copyBtn.style.backgroundColor = '#10b981';
-            setTimeout(() => {
-                copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;">content_copy</span> Copy link';
-                copyBtn.style.backgroundColor = 'var(--primary)';
-            }, 2000);
+        overlay.querySelector('.close-share').addEventListener('click', () => {
+            document.body.removeChild(overlay);
         });
-    });
-};
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) document.body.removeChild(overlay);
+        });
+
+        const copyBtn = overlay.querySelector('.copy-share-btn');
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(url).then(() => {
+                copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;">check</span> Copied!';
+                copyBtn.style.backgroundColor = '#10b981';
+                setTimeout(() => {
+                    copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;">content_copy</span> Copy link';
+                    copyBtn.style.backgroundColor = 'var(--primary)';
+                }, 2000);
+            });
+        });
+    };
 }
 
 if (typeof window.showConfirmModal === 'undefined') {
-window.showConfirmModal = function(message) {
-    return new Promise((resolve) => {
-        const overlay = document.createElement('div');
-        overlay.style.position = 'fixed';
-        overlay.style.top = '0'; overlay.style.left = '0'; overlay.style.right = '0'; overlay.style.bottom = '0';
-        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-        overlay.style.backdropFilter = 'blur(4px)';
-        overlay.style.zIndex = '9999';
-        overlay.style.display = 'flex';
-        overlay.style.alignItems = 'center';
-        overlay.style.justifyContent = 'center';
+    window.showConfirmModal = function (message) {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0'; overlay.style.left = '0'; overlay.style.right = '0'; overlay.style.bottom = '0';
+            overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            overlay.style.backdropFilter = 'blur(4px)';
+            overlay.style.zIndex = '9999';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
 
-        const modal = document.createElement('div');
-        modal.style.backgroundColor = 'var(--bg-elevated)';
-        modal.style.border = '1px solid var(--border-color)';
-        modal.style.borderRadius = 'var(--radius-lg)';
-        modal.style.padding = 'var(--space-4)';
-        modal.style.width = '90%';
-        modal.style.maxWidth = '400px';
-        modal.style.boxShadow = 'var(--shadow-xl)';
-        modal.style.position = 'relative';
+            const modal = document.createElement('div');
+            modal.style.backgroundColor = 'var(--bg-elevated)';
+            modal.style.border = '1px solid var(--border-color)';
+            modal.style.borderRadius = 'var(--radius-lg)';
+            modal.style.padding = 'var(--space-4)';
+            modal.style.width = '90%';
+            modal.style.maxWidth = '400px';
+            modal.style.boxShadow = 'var(--shadow-xl)';
+            modal.style.position = 'relative';
 
-        modal.innerHTML = `
+            modal.innerHTML = `
             <h3 style="margin:0 0 12px 0; font-size:18px; color:var(--text-primary); font-weight:600;">Confirm Action</h3>
             <p style="margin:0 0 20px 0; color:var(--text-secondary); font-size:14px; line-height:1.5;">${message}</p>
             <div style="display:flex; justify-content:flex-end; gap:12px;">
@@ -2032,45 +2052,45 @@ window.showConfirmModal = function(message) {
             </div>
         `;
 
-        overlay.appendChild(modal);
-        document.body.appendChild(overlay);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
 
-        const close = (result) => {
-            if (overlay.parentNode) document.body.removeChild(overlay);
-            resolve(result);
-        };
+            const close = (result) => {
+                if (overlay.parentNode) document.body.removeChild(overlay);
+                resolve(result);
+            };
 
-        overlay.querySelector('.cancel-btn').addEventListener('click', () => close(false));
-        overlay.querySelector('.confirm-btn').addEventListener('click', () => close(true));
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(false); });
-    });
-};
+            overlay.querySelector('.cancel-btn').addEventListener('click', () => close(false));
+            overlay.querySelector('.confirm-btn').addEventListener('click', () => close(true));
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) close(false); });
+        });
+    };
 }
 
 if (typeof window.showPromptModal === 'undefined') {
-window.showPromptModal = function(title, defaultValue) {
-    return new Promise((resolve) => {
-        const overlay = document.createElement('div');
-        overlay.style.position = 'fixed';
-        overlay.style.top = '0'; overlay.style.left = '0'; overlay.style.right = '0'; overlay.style.bottom = '0';
-        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-        overlay.style.backdropFilter = 'blur(4px)';
-        overlay.style.zIndex = '9999';
-        overlay.style.display = 'flex';
-        overlay.style.alignItems = 'center';
-        overlay.style.justifyContent = 'center';
+    window.showPromptModal = function (title, defaultValue) {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0'; overlay.style.left = '0'; overlay.style.right = '0'; overlay.style.bottom = '0';
+            overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            overlay.style.backdropFilter = 'blur(4px)';
+            overlay.style.zIndex = '9999';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
 
-        const modal = document.createElement('div');
-        modal.style.backgroundColor = 'var(--bg-elevated)';
-        modal.style.border = '1px solid var(--border-color)';
-        modal.style.borderRadius = 'var(--radius-lg)';
-        modal.style.padding = 'var(--space-4)';
-        modal.style.width = '90%';
-        modal.style.maxWidth = '400px';
-        modal.style.boxShadow = 'var(--shadow-xl)';
-        modal.style.position = 'relative';
+            const modal = document.createElement('div');
+            modal.style.backgroundColor = 'var(--bg-elevated)';
+            modal.style.border = '1px solid var(--border-color)';
+            modal.style.borderRadius = 'var(--radius-lg)';
+            modal.style.padding = 'var(--space-4)';
+            modal.style.width = '90%';
+            modal.style.maxWidth = '400px';
+            modal.style.boxShadow = 'var(--shadow-xl)';
+            modal.style.position = 'relative';
 
-        modal.innerHTML = `
+            modal.innerHTML = `
             <h3 style="margin:0 0 16px 0; font-size:18px; color:var(--text-primary); font-weight:600;">${title}</h3>
             <input type="text" class="prompt-input" value="${defaultValue || ''}" style="width:100%; box-sizing:border-box; background:var(--bg-secondary); border:1px solid var(--border-color); color:var(--text-primary); padding:10px 14px; border-radius:var(--radius-md); font-size:14px; margin-bottom:20px; outline:none;" />
             <div style="display:flex; justify-content:flex-end; gap:12px;">
@@ -2079,30 +2099,30 @@ window.showPromptModal = function(title, defaultValue) {
             </div>
         `;
 
-        overlay.appendChild(modal);
-        document.body.appendChild(overlay);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
 
-        const input = overlay.querySelector('.prompt-input');
-        input.focus();
-        input.select();
+            const input = overlay.querySelector('.prompt-input');
+            input.focus();
+            input.select();
 
-        const close = (result) => {
-            if (overlay.parentNode) document.body.removeChild(overlay);
-            resolve(result);
-        };
+            const close = (result) => {
+                if (overlay.parentNode) document.body.removeChild(overlay);
+                resolve(result);
+            };
 
-        overlay.querySelector('.cancel-btn').addEventListener('click', () => close(null));
-        overlay.querySelector('.confirm-btn').addEventListener('click', () => close(input.value));
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') close(input.value);
-            if (e.key === 'Escape') close(null);
+            overlay.querySelector('.cancel-btn').addEventListener('click', () => close(null));
+            overlay.querySelector('.confirm-btn').addEventListener('click', () => close(input.value));
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') close(input.value);
+                if (e.key === 'Escape') close(null);
+            });
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) close(null); });
         });
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(null); });
-    });
-};
+    };
 }
 
-window.showAlertModal = function(title, message) {
+window.showAlertModal = function (title, message) {
     const overlay = document.createElement('div');
     overlay.style.position = 'fixed';
     overlay.style.top = '0'; overlay.style.left = '0'; overlay.style.right = '0'; overlay.style.bottom = '0';
