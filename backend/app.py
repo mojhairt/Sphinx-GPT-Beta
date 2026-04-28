@@ -202,6 +202,26 @@ app = FastAPI(
     version="3.0"
 )
 
+try:
+    from backend.memory.generate_embeddings import _generate_sync
+except ImportError:
+    try:
+        from memory.generate_embeddings import _generate_sync
+    except ImportError:
+        _generate_sync = None
+
+@app.on_event("startup")
+async def startup_event():
+    print("⏳ Pre-loading local embedding model during startup...")
+    if _generate_sync:
+        try:
+            # Running synchronous model loading in a thread to avoid blocking
+            import asyncio
+            await asyncio.to_thread(_generate_sync, ["warmup"])
+            print("✅ Local embedding model pre-loaded successfully!")
+        except Exception as e:
+            print(f"⚠️ Failed to pre-load embedding model: {e}")
+
 # Simple In-Memory Rate Limiter (Token Bucket per IP)
 from fastapi import HTTPException
 
