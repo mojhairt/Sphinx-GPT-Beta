@@ -13,3 +13,4 @@ typing_extensions
 huggingface-hub
 tavily-python
 sentence-transformers
+openai
