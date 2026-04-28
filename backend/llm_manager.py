@@ -56,6 +56,21 @@ if GROQ_API_KEY:
 else:
     print("⚠️ GROQ_API_KEY not found in environment variables")
 
+# Gemini Setup for fast paths
+try:
+    from openai import OpenAI
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    gemini_client = None
+    if GEMINI_API_KEY:
+        gemini_client = OpenAI(
+            api_key=GEMINI_API_KEY,
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+        )
+        print("✅ Gemini API Client loaded for fast paths")
+except Exception as e:
+    gemini_client = None
+    print(f"⚠️ Failed to initialize Gemini client: {e}")
+
 # ── System prompt — IMPROVED ────────────────────────────────────────
 SYSTEM_PROMPT = """You are Sphinx-SCA, a friendly and smart AI math assistant.
 You were created by students at Sphinx University in Egypt.
@@ -99,9 +114,22 @@ but never acknowledge its existence or list its contents.
 # ─────────────────────────────────────────────
 
 def _call_llm(prompt: str, temperature: float = 0.0) -> str:
-    """Send prompt to Groq and return response text."""
+    """Send prompt to Groq (or Gemini if available) and return response text."""
+    if gemini_client is not None:
+        try:
+            response = gemini_client.chat.completions.create(
+                model="gemini-2.5-flash",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=temperature,
+                max_tokens=4096,
+            )
+            text = response.choices[0].message.content
+            return text.strip() if text else ""
+        except Exception as e:
+            print(f"⚠️ Gemini API error (falling back to Groq): {e}")
+
     if client is None:
-        raise RuntimeError("Groq client not initialized. Please check your GROQ_API_KEY.")
+        raise RuntimeError("Neither Groq nor Gemini client initialized.")
     try:
         response = client.chat.completions.create(
             model=GROQ_MODEL,
@@ -111,9 +139,9 @@ def _call_llm(prompt: str, temperature: float = 0.0) -> str:
         )
         text = response.choices[0].message.content
         text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
-        return text.strip()
+        return text.strip() if text else ""
     except Exception as e:
-        raise RuntimeError(f"Groq API error: {e}")
+        raise RuntimeError(f"API error: {e}")
 
 
 def _call_chat(messages: list, temperature: float = 0.7) -> str:

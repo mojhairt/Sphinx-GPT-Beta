@@ -14,9 +14,9 @@ if __package__ is None:
         sys.path.insert(0, project_root)
 
 try:
-    from backend.llm_manager import client as groq_client
+    from backend.llm_manager import client as groq_client, gemini_client
 except ImportError:
-    from llm_manager import client as groq_client
+    from llm_manager import client as groq_client, gemini_client
 
 
 # ─────────────────────────────────────────────
@@ -85,6 +85,28 @@ class StudyLLM:
               json_mode: bool = False,
               temperature: float = 0.4,
               max_tokens: int = 300) -> str:
+        
+        # ── Gemini Fast Path ──
+        if gemini_client is not None:
+            try:
+                g_kwargs = {
+                    "model":       "gemini-2.5-flash",
+                    "temperature": temperature,
+                    "max_tokens":  max_tokens,
+                    "messages": [
+                        {"role": "system", "content": system},
+                        {"role": "user",   "content": user},
+                    ],
+                }
+                if json_mode:
+                    g_kwargs["response_format"] = {"type": "json_object"}
+                resp = gemini_client.chat.completions.create(**g_kwargs)
+                text = resp.choices[0].message.content
+                return text.strip() if text else ""
+            except Exception as exc:
+                print(f"⚠️ Gemini API error (falling back to Groq): {exc}")
+
+        # ── Groq Path ──
         try:
             kwargs: dict = {
                 "model":       self.model,
