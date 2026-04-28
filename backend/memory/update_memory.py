@@ -55,11 +55,24 @@ If no changes are needed, return an empty array [].
 Respond ONLY in valid JSON. No markdown backticks, no explanations.
 """
     try:
-        response = await client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.0
-        )
+        gemini_api_key = os.getenv("GEMINI_API_KEY")
+        if gemini_api_key:
+            from openai import AsyncOpenAI
+            gemini_client = AsyncOpenAI(
+                api_key=gemini_api_key,
+                base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+            )
+            response = await gemini_client.chat.completions.create(
+                model="gemini-2.5-flash",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.0
+            )
+        else:
+            response = await client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.0
+            )
         
         reply = response.choices[0].message.content.strip()
         # ✅ FIX (S-15): Robust backtick stripping using regex
