@@ -1041,8 +1041,9 @@ async function handleStudySend(text, imageUrl, type) {
     if (dropZoneInput) dropZoneInput.value = '';
 
     transitionToChat();
-    addMessage(text, 'user', imageUrl);
-    saveMessageToSupabase(text, 'user', imageUrl);
+    const finalUserText = text || '📷 Image Message';
+    addMessage(finalUserText, 'user', imageUrl);
+    saveMessageToSupabase(finalUserText, 'user', imageUrl);
 
     const aiMsgDiv = addMessage('', 'ai');
     const aiTextDiv = aiMsgDiv.querySelector('.text-body');
@@ -1055,7 +1056,7 @@ async function handleStudySend(text, imageUrl, type) {
         // ── FIX 2: Classify LOCALLY — no API call needed ──────────
         // The backend classify endpoint is slow (LLM call).
         // We use the same fast regex logic here in JS.
-        const intent = classifyIntentLocal(text);
+        const intent = classifyIntentLocal(text, imageUrl);
 
         // ── FAST PATHS ────────────────────────────────────────────
         if (intent === 'search') {
@@ -1177,7 +1178,7 @@ async function handleStudySend(text, imageUrl, type) {
 
         // ── NEW SESSION ───────────────────────────────────────────
         if (!state.activeStudySessionId) {
-            state.studyOriginalQuestion = text;
+            state.studyOriginalQuestion = text || 'Solve this math problem from the image.';
             // ✅ FIX (M-04): Auto-detect math branch from user input instead of always defaulting to 'algebra'
             state.studyBranch = detectBranchLocal(text) || state.studyBranch || 'algebra';
             state.studyHintsUsed = 0;
@@ -1281,7 +1282,10 @@ async function handleStudySend(text, imageUrl, type) {
 // Replaces the /study/classify API call — runs instantly, no latency
 // Same logic as study_llm.py classify_intent()
 // ══════════════════════════════════════════════════════════════
-function classifyIntentLocal(text) {
+function classifyIntentLocal(text, imageUrl = null) {
+    // If an image was uploaded, it's almost definitely a study/math problem
+    if (imageUrl) return 'study';
+
     const t = text.trim().toLowerCase();
 
     // Math operators / expressions → study
@@ -1585,6 +1589,7 @@ function addMessage(text, sender, imageUrl = null) {
     const chatContainer = $('chat-messages');
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${sender}-message`;
+    if (imageUrl) msgDiv.classList.add('has-image');
 
     if (sender === 'ai') {
         msgDiv.innerHTML = `
@@ -1603,8 +1608,8 @@ function addMessage(text, sender, imageUrl = null) {
         msgDiv.innerHTML = `
             <div style="display:flex;flex-direction:column;align-items:flex-end;width:100%;">
                 <div class="message-content" style="max-width:100%;">
-                    ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" class="message-image">` : ''}  
-                    <div class="text-body">${escapeHtml(text)}</div>
+                    ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" class="message-image" data-action="zoom-media" alt="Uploaded image">` : ''}  
+                    ${text && text !== '📷 Image Message' ? `<div class="text-body">${escapeHtml(text)}</div>` : ''}
                 </div>
                 <div class="message-actions-inline" style="display:flex;gap:4px;align-items:center;margin-top:6px;margin-right:4px;">
                     <span class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>

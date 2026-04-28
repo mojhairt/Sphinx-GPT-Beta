@@ -270,6 +270,7 @@ class StudyRequest(BaseModel):
     branch: str = "algebra"
     session_id: Optional[str] = None
     user_id: Optional[str] = None          # ✅ Memory: user identity for study mode
+    image_data: Optional[str] = None       # ✅ Vision: base64 image for Llama 4 Scout extraction
 
 class CheckRequest(BaseModel):
     session_id: str
@@ -278,6 +279,7 @@ class CheckRequest(BaseModel):
     student_answer: str = Field(..., max_length=5000)
     correct_answer: str = Field(..., max_length=5000)
     user_id: Optional[str] = None          # ✅ Memory: user identity for study mode
+    image_data: Optional[str] = None       # ✅ Vision: base64 image for Llama 4 Scout extraction
 
 class TitleRequest(BaseModel):
     text: str = Field(..., max_length=10000)
@@ -503,6 +505,36 @@ try:
 except ImportError:
     from study_agent import get_study_agent
 
+
+async def _extract_image_text(image_data: Optional[str]) -> Optional[str]:
+    """
+    ✅ Vision: Use Llama 4 Scout to extract text/equations from an uploaded image.
+    Returns the extracted text or None if no image or extraction fails.
+    """
+    if not image_data:
+        return None
+    try:
+        try:
+            import backend.vision_scout as vision_scout
+        except ImportError:
+            import vision_scout
+        extracted = await asyncio.to_thread(vision_scout.analyze_image_base64, image_data)
+        if extracted and not extracted.startswith("Error"):
+            return extracted
+    except Exception as e:
+        logger.warning("Vision Scout extraction failed: %s", e)
+    return None
+
+
+def _enhance_question_with_image(question: str, image_text: str) -> str:
+    """
+    ✅ Vision: Prepend extracted image content to the user's question.
+    """
+    return (
+        f"[Content extracted from uploaded image]:\n{image_text}\n\n"
+        f"User question: {question}"
+    )
+
 def render_study_markdown(result: dict) -> str:
     """
     Renders study result into clean markdown — NO fixed section headers.
@@ -566,22 +598,37 @@ async def generate_title(req: TitleRequest):
 @app.post("/study/chat")
 async def study_chat(req: StudyRequest):
     """Casual chat — no graph, direct LLM."""
+    question = req.question
+    # ✅ Vision: extract image content if present
+    image_text = await _extract_image_text(req.image_data)
+    if image_text:
+        question = _enhance_question_with_image(question, image_text)
     agent = get_study_agent()
-    result = await agent.chat(req.question, user_id=req.user_id or "")
+    result = await agent.chat(question, user_id=req.user_id or "")
     return result
 
 @app.post("/study/explain")
 async def study_explain(req: StudyRequest):
     """Explain a concept — direct LLM, no graph."""
+    question = req.question
+    # ✅ Vision: extract image content if present
+    image_text = await _extract_image_text(req.image_data)
+    if image_text:
+        question = _enhance_question_with_image(question, image_text)
     agent = get_study_agent()
-    result = await agent.explain(req.question, req.branch, user_id=req.user_id or "")
+    result = await agent.explain(question, req.branch, user_id=req.user_id or "")
     return result
 
 @app.post("/study/help")
 async def study_help(req: StudyRequest):
     """Help confused user — direct LLM, no graph."""
+    question = req.question
+    # ✅ Vision: extract image content if present
+    image_text = await _extract_image_text(req.image_data)
+    if image_text:
+        question = _enhance_question_with_image(question, image_text)
     agent = get_study_agent()
-    result = await agent.help_user(req.question, req.branch, user_id=req.user_id or "")
+    result = await agent.help_user(question, req.branch, user_id=req.user_id or "")
     return result
 
 @app.post("/study/classify")
@@ -595,8 +642,13 @@ async def study_classify(req: StudyRequest):
 
 @app.post("/study/start")
 async def study_start(req: StudyRequest):
+    question = req.question
+    # ✅ Vision: extract image content and use it as the study question
+    image_text = await _extract_image_text(req.image_data)
+    if image_text:
+        question = _enhance_question_with_image(question, image_text)
     agent = get_study_agent()
-    result = await agent.start(req.question, req.branch, user_id=req.user_id or "")
+    result = await agent.start(question, req.branch, user_id=req.user_id or "")
     result["display_markdown"] = render_study_markdown(result)
     return result
 

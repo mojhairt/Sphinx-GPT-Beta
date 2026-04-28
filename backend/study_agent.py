@@ -18,6 +18,7 @@ import json
 import logging
 import threading
 import asyncio
+import re
 from typing import Optional
 
 if __package__ is None:
@@ -601,7 +602,7 @@ def _run_agent_loop(user_message: str, context: dict) -> dict:
                 messages    = messages,
                 tools       = STUDY_TOOLS,
                 temperature = 0.4,
-                max_tokens  = 800,
+                max_tokens  = 2500,
             )
         except Exception as exc:
             logger.error("[Agent] LLM call failed: %s", exc)
@@ -617,7 +618,10 @@ def _run_agent_loop(user_message: str, context: dict) -> dict:
 
         # No tool calls → LLM is done
         if not assistant_msg.tool_calls:
-            accumulated["agent_message"] = assistant_msg.content or ""
+            content = assistant_msg.content or ""
+            if content:
+                content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+            accumulated["agent_message"] = content
             logger.info("[Agent] Done at step %d (no tool call)", step + 1)
             break
 

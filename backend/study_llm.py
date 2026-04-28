@@ -66,7 +66,7 @@ def _chat_persona(lang: str) -> str:
 # TOKEN CAPS
 # ─────────────────────────────────────────────
 
-_TOKENS = {"easy": 200, "medium": 350, "hard": 500}
+_TOKENS = {"easy": 1000, "medium": 1500, "hard": 2500}
 
 
 # ─────────────────────────────────────────────
@@ -98,7 +98,11 @@ class StudyLLM:
             if json_mode:
                 kwargs["response_format"] = {"type": "json_object"}
             resp = self.client.chat.completions.create(**kwargs)
-            return resp.choices[0].message.content.strip()
+            text = resp.choices[0].message.content
+            # Remove reasoning tags if model emits them
+            if text:
+                text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+            return text if text else ""
         except Exception as exc:
             return json.dumps({"error": str(exc)}) if json_mode else f"Error: {exc}"
 
