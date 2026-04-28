@@ -118,7 +118,7 @@ def _call_llm(prompt: str, temperature: float = 0.0) -> str:
     if gemini_client is not None:
         try:
             response = gemini_client.chat.completions.create(
-                model="gemini-2.5-flash",
+                model="gemini-3.1-flash-lite-preview",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=temperature,
                 max_tokens=4096,
