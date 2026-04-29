@@ -1,20 +1,37 @@
-import asyncio
-from sentence_transformers import SentenceTransformer
+import os
+from openai import OpenAI
 
-# We load the model lazily so it doesn't block the application startup
-_model = None
+# Initialize Gemini client for embeddings (Fast Path)
+_client = None
+
+def _get_client():
+    global _client
+    if _client is None:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if api_key:
+            _client = OpenAI(
+                api_key=api_key,
+                base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+            )
+    return _client
 
 def _generate_sync(strings: list[str]):
-    """Generates embeddings synchronously using local model."""
-    global _model
-    if _model is None:
-        print("⏳ Loading local embedding model (SentenceTransformer) for the first time...")
-        _model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
-        print("✅ Local embedding model loaded!")
-        
-    embeddings = _model.encode(strings)
-    # convert numpy array to normal python list
-    return embeddings.tolist()
+    """Generates embeddings using Google's Cloud API (Blazing fast)."""
+    client = _get_client()
+    if not client:
+        print("⚠️ GEMINI_API_KEY not found. Embeddings disabled.")
+        return []
+
+    try:
+        response = client.embeddings.create(
+            model="text-embedding-004",
+            input=strings
+        )
+        # Extract embeddings from response
+        return [data.embedding for data in response.data]
+    except Exception as e:
+        print(f"⚠️ Google Embedding API error: {e}")
+        return []
 
 async def generate_embeddings(strings: list[str]):
     if not strings:

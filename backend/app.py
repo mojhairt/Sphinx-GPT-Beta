@@ -212,15 +212,15 @@ except ImportError:
 
 @app.on_event("startup")
 async def startup_event():
-    print("⏳ Pre-loading local embedding model during startup...")
+    print("🚀 Application starting...")
     if _generate_sync:
         try:
-            # Running synchronous model loading in a thread to avoid blocking
+            # Warm up cloud embedding connection
             import asyncio
             await asyncio.to_thread(_generate_sync, ["warmup"])
-            print("✅ Local embedding model pre-loaded successfully!")
+            print("✅ Embedding system ready (Cloud API)")
         except Exception as e:
-            print(f"⚠️ Failed to pre-load embedding model: {e}")
+            print(f"⚠️ Startup warmup failed: {e}")
 
 # Simple In-Memory Rate Limiter (Token Bucket per IP)
 from fastapi import HTTPException
@@ -935,18 +935,43 @@ async def solve_stream(req: QuestionRequest):
 
     messages.append({"role": "user", "content": prompt})
 
-    try:
-        class_start = time.time()
-        c = await asyncio.to_thread(llm_local.classify, req.question)
-        class_duration = time.time() - class_start
-        logger.info(f"⏱️ Classification took {class_duration:.2f}s (Branch: {c.get('branch')})")
-        branch = c.get("branch", "algebra")
-    except Exception as e:
-        logger.warning(f"Classification failed in solve_stream: {e}")
-        branch = "algebra"
+    # Prepare parallel tasks for classification and memory context
+    async def get_classification():
+        try:
+            class_start = time.time()
+            c = await asyncio.to_thread(llm_local.classify, req.question)
+            class_duration = time.time() - class_start
+            logger.info(f"⏱️ Classification took {class_duration:.2f}s (Branch: {c.get('branch')})")
+            return c.get("branch", "algebra")
+        except Exception as e:
+            logger.warning(f"Classification failed: {e}")
+            return "algebra"
+
+    async def get_memory():
+        if req.user_id:
+            try:
+                mem_start = time.time()
+                context = await llm_local.memory.get_context(req.user_id, req.question)
+                mem_duration = time.time() - mem_start
+                logger.info(f"⏱️ Memory fetch took {mem_duration:.2f}s")
+                return context
+            except Exception as e:
+                logger.warning(f"Memory fetch failed: {e}")
+        return ""
+
+    # Start both tasks in parallel
+    branch_task = asyncio.create_task(get_classification())
+    memory_task = asyncio.create_task(get_memory())
+
+    # Wait for both to complete before proceeding
+    branch, memory_context = await asyncio.gather(branch_task, memory_task)
 
     async def chunk_generator():
         try:
+            # Inject memory context into the messages before streaming
+            if memory_context:
+                messages[-1]["content"] = f"[System Context About User: {memory_context}]\n\n{messages[-1]['content']}"
+
             if req.image_data:
                 try:
                     import backend.vision_scout as vision_scout
