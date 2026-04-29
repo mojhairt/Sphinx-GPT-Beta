@@ -12,28 +12,23 @@ def _generate_sync(strings: list[str]):
         print("⚠️ GEMINI_API_KEY not found. Embeddings disabled.")
         return []
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:batchEmbedContents?key={GEMINI_API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={GEMINI_API_KEY}"
     
-    requests = [
-        {
-            "model": "models/text-embedding-004",
-            "content": {"parts": [{"text": s}]}
-        } for s in strings
-    ]
-    
+    embeddings = []
     try:
-        # We use a sync client here as it's wrapped in asyncio.to_thread
         with httpx.Client(timeout=10.0) as client:
-            resp = client.post(url, json={"requests": requests})
-            resp.raise_for_status()
-            data = resp.json()
-            
-            # Extract embeddings
-            return [e["values"] for e in data.get("embeddings", [])]
+            for s in strings:
+                body = {
+                    "model": "models/text-embedding-004",
+                    "content": {"parts": [{"text": s}]}
+                }
+                resp = client.post(url, json=body)
+                resp.raise_for_status()
+                data = resp.json()
+                embeddings.append(data["embedding"]["values"])
+        return embeddings
     except Exception as e:
-        print(f"⚠️ Google Embedding REST API error: {e}")
-        if hasattr(e, 'response') and e.response:
-            print(f"Response: {e.response.text}")
+        print(f"⚠️ Google Embedding API error: {e}")
         return []
 
 async def generate_embeddings(strings: list[str]):
