@@ -105,6 +105,9 @@ Respond ONLY in valid JSON. No markdown backticks, no explanations.
                 cats = action.get("categories", [])
                 if text:
                     emb = await generate_embeddings([text])
+                    if not emb:
+                        print("⚠️ Skipping ADD: embedding generation failed.")
+                        continue
                     await insert_memories([
                         EmbeddedMemory(
                             user_id=user_id,
@@ -123,6 +126,9 @@ Respond ONLY in valid JSON. No markdown backticks, no explanations.
                     point_id = existing_memories[m_id].point_id
                     await delete_records([point_id])
                     emb = await generate_embeddings([text])
+                    if not emb:
+                        print("⚠️ Skipping UPDATE: embedding generation failed.")
+                        continue
                     await insert_memories([
                         EmbeddedMemory(
                             user_id=user_id,
@@ -148,8 +154,16 @@ Respond ONLY in valid JSON. No markdown backticks, no explanations.
 
 async def update_memories(user_id: str, messages: list[dict]):
     try:
-        latest_user_message = [x["content"] for x in messages if x["role"] == "user"][-1]
-        embedding = (await generate_embeddings([latest_user_message]))[0]
+        user_messages = [x["content"] for x in messages if x["role"] == "user"]
+        if not user_messages:
+            return "No user messages found"
+        latest_user_message = user_messages[-1]
+        
+        emb = await generate_embeddings([latest_user_message])
+        if not emb:
+            print("⚠️ Embedding generation failed — skipping memory update.")
+            return "Embedding failed"
+        embedding = emb[0]
 
         retrieved_memories = await search_memories(search_vector=embedding, user_id=user_id)
 

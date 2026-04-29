@@ -12,14 +12,14 @@ def _generate_sync(strings: list[str]):
         print("⚠️ GEMINI_API_KEY not found. Embeddings disabled.")
         return []
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent?key={GEMINI_API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key={GEMINI_API_KEY}"
     
     embeddings = []
     try:
         with httpx.Client(timeout=10.0) as client:
             for s in strings:
                 body = {
-                    "model": "models/embedding-001",
+                    "model": "models/gemini-embedding-001",
                     "content": {"parts": [{"text": s}]}
                 }
                 resp = client.post(url, json=body)
