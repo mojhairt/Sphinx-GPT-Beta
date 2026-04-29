@@ -1,36 +1,38 @@
 import os
-from openai import OpenAI
+import httpx
 
-# Initialize Gemini client for embeddings (Fast Path)
-_client = None
-
-def _get_client():
-    global _client
-    if _client is None:
-        api_key = os.getenv("GEMINI_API_KEY")
-        if api_key:
-            _client = OpenAI(
-                api_key=api_key,
-                base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
-            )
-    return _client
+# We use the REST API directly since OpenAI-compatible endpoint 
+# doesn't support embeddings yet.
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 def _generate_sync(strings: list[str]):
-    """Generates embeddings using Google's Cloud API (Blazing fast)."""
-    client = _get_client()
-    if not client:
+    """Generates embeddings using Google's REST API (Native)."""
+    if not GEMINI_API_KEY:
         print("⚠️ GEMINI_API_KEY not found. Embeddings disabled.")
         return []
 
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:batchEmbedContents?key={GEMINI_API_KEY}"
+    
+    requests = [
+        {
+            "model": "models/text-embedding-004",
+            "content": {"parts": [{"text": s}]}
+        } for s in strings
+    ]
+    
     try:
-        response = client.embeddings.create(
-            model="text-embedding-004",
-            input=strings
-        )
-        # Extract embeddings from response
-        return [data.embedding for data in response.data]
+        # We use a sync client here as it's wrapped in asyncio.to_thread
+        with httpx.Client(timeout=10.0) as client:
+            resp = client.post(url, json={"requests": requests})
+            resp.raise_for_status()
+            data = resp.json()
+            
+            # Extract embeddings
+            return [e["values"] for e in data.get("embeddings", [])]
     except Exception as e:
-        print(f"⚠️ Google Embedding API error: {e}")
+        print(f"⚠️ Google Embedding REST API error: {e}")
+        if hasattr(e, 'response') and e.response:
+            print(f"Response: {e.response.text}")
         return []
 
 async def generate_embeddings(strings: list[str]):
