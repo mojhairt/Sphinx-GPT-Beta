@@ -788,9 +788,12 @@ class LLMManager:
             last_msg = messages[-1]["content"] if messages[-1]["role"] == "user" else ""
             if last_msg:
                 try:
+                    mem_start = asyncio.get_event_loop().time()
                     memory_context = await asyncio.wait_for(
                         self.memory.get_context(user_id, last_msg), timeout=45.0
                     )
+                    mem_duration = asyncio.get_event_loop().time() - mem_start
+                    print(f"⏱️ Memory context fetch took {mem_duration:.2f}s")
                     if memory_context:
                         messages[-1]["content"] = f"[System Context About User: {memory_context}]\n\n{last_msg}"
                 except asyncio.TimeoutError:

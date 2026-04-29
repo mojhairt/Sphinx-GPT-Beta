@@ -905,8 +905,11 @@ async def solve(req: QuestionRequest):
     return await route_and_solve(req.question, req.history, req.mode, user_id=req.user_id)
 
 
+import time
+
 @app.post("/solve_stream")
 async def solve_stream(req: QuestionRequest):
+    start_time = time.time()
     """Streaming endpoint for chat-like experience."""
     if llm is None:
         return JSONResponse({"success": False, "error": "LLM not initialized"}, status_code=500)
@@ -933,7 +936,10 @@ async def solve_stream(req: QuestionRequest):
     messages.append({"role": "user", "content": prompt})
 
     try:
+        class_start = time.time()
         c = await asyncio.to_thread(llm_local.classify, req.question)
+        class_duration = time.time() - class_start
+        logger.info(f"⏱️ Classification took {class_duration:.2f}s (Branch: {c.get('branch')})")
         branch = c.get("branch", "algebra")
     except Exception as e:
         logger.warning(f"Classification failed in solve_stream: {e}")
@@ -947,7 +953,10 @@ async def solve_stream(req: QuestionRequest):
                 except ImportError:
                     import vision_scout
 
+                vision_start = time.time()
                 image_context = await asyncio.to_thread(vision_scout.analyze_image_base64, req.image_data)
+                vision_duration = time.time() - vision_start
+                logger.info(f"⏱️ Vision Analysis took {vision_duration:.2f}s")
 
                 # Inject the extracted context into the main LLM's prompt
                 enhanced_prompt = f"Image Description (extracted by Vision Scout):\n{image_context}\n\nUser Question:\n{messages[-1]['content']}"
@@ -967,6 +976,8 @@ async def solve_stream(req: QuestionRequest):
             logger.error("Streaming error: %s", e, exc_info=True)
             yield f"data: {json.dumps({'error': 'Stream interrupted'})}\n\n"
         finally:
+            total_duration = time.time() - start_time
+            logger.info(f"⏱️ Total stream duration: {total_duration:.2f}s")
             yield "data: [DONE]\n\n"
 
     return StreamingResponse(chunk_generator(), media_type="text/event-stream")
