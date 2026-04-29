@@ -66,7 +66,7 @@ Respond ONLY in valid JSON. No markdown backticks, no explanations.
                     base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
                 )
                 response = await gemini_client.chat.completions.create(
-                    model="gemini-3.1-flash-lite-preview",
+                    model="gemini-2.5-flash",
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.0
                 )

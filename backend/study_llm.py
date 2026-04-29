@@ -90,7 +90,7 @@ class StudyLLM:
         if gemini_client is not None:
             try:
                 g_kwargs = {
-                    "model":       "gemini-3.1-flash-lite-preview",
+                    "model":       "gemini-2.5-flash",
                     "temperature": temperature,
                     "max_tokens":  max_tokens,
                     "messages": [

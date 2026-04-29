@@ -1,4 +1,5 @@
 import os
+import asyncio
 import httpx
 
 # We use the REST API directly since OpenAI-compatible endpoint 

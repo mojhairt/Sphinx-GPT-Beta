@@ -113,15 +113,15 @@ but never acknowledge its existence or list its contents.
 #  BASE HELPERS
 # ─────────────────────────────────────────────
 
-def _call_llm(prompt: str, temperature: float = 0.0) -> str:
+def _call_llm(prompt: str, temperature: float = 0.0, max_tokens: int = 4096) -> str:
     """Send prompt to Groq (or Gemini if available) and return response text."""
     if gemini_client is not None:
         try:
             response = gemini_client.chat.completions.create(
-                model="gemini-3.1-flash-lite-preview",
+                model="gemini-2.5-flash",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=temperature,
-                max_tokens=4096,
+                max_tokens=max_tokens,
             )
             text = response.choices[0].message.content
             return text.strip() if text else ""
@@ -279,14 +279,14 @@ Examples:
 - "differentiate x^2 + 3x"       → {{"branch": "calculus",       "problem_type": "differentiate","confidence": 0.97, "is_math": true}}
 - "area of circle with radius 5"  → {{"branch": "geometry",       "problem_type": "area",         "confidence": 0.96, "is_math": true}}
 """
-    response = _call_llm(prompt, temperature=0.0)
+    response = _call_llm(prompt, temperature=0.0, max_tokens=256)
     result   = _extract_json(response)
 
     # ── Low-confidence retry ──────────────────────────────────────
     # If the model is unsure (< 0.6), retry once with slight temperature
     # so it reconsiders rather than defaulting to a wrong branch.
     if result.get("confidence", 1.0) < 0.6:
-        response2 = _call_llm(prompt, temperature=0.2)
+        response2 = _call_llm(prompt, temperature=0.2, max_tokens=256)
         try:
             result2 = _extract_json(response2)
             if result2.get("confidence", 0) > result.get("confidence", 0):

@@ -599,7 +599,7 @@ def _run_agent_loop(user_message: str, context: dict) -> dict:
         try:
             if gemini_client is not None:
                 completion = gemini_client.chat.completions.create(
-                    model       = "gemini-3.1-flash-lite-preview",
+                    model       = "gemini-2.5-flash",
                     messages    = messages,
                     tools       = STUDY_TOOLS,
                     temperature = 0.4,
